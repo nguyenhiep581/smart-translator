@@ -293,7 +293,7 @@ CacheService
       host: 'https://api.openai.com',
       path: '/v1/chat/completions',
       temperature: 0.3,
-      maxTokens: 1000,
+      maxTokens: 2048,
       availableModels: ['gpt-4', 'gpt-3.5-turbo', ...]
     },
     
@@ -303,7 +303,7 @@ CacheService
       host: 'https://api.anthropic.com',
       path: '/v1/messages',
       temperature: 0.3,
-      maxTokens: 1000,
+      maxTokens: 2048,
       availableModels: ['claude-3-opus-20240229', ...]
     },
     
@@ -366,7 +366,7 @@ CacheService
 - Maintains translation quality
 
 ### **4. Token Limits**
-- Default max_tokens: 1000 (reduced from 2000)
+- Default max_tokens: 2048
 - Faster generation for most use cases
 - Configurable for longer texts
 

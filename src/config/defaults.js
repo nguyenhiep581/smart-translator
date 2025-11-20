@@ -12,7 +12,7 @@ export const DEFAULT_CONFIG = {
     host: 'https://api.openai.com',
     path: '/v1/chat/completions',
     temperature: 0.3,
-    maxTokens: 2000,
+    maxTokens: 2048,
   },
 
   // Claude settings
@@ -22,7 +22,7 @@ export const DEFAULT_CONFIG = {
     host: 'https://api.anthropic.com',
     path: '/v1/messages',
     temperature: 0.3,
-    maxTokens: 2000,
+    maxTokens: 2048,
   },
 
   // Language settings

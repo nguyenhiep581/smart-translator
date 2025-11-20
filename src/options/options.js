@@ -248,10 +248,12 @@ async function getAvailableModels(provider, buttonId) {
 // Save language settings
 document.getElementById('save-language')?.addEventListener('click', async () => {
   const defaultTarget = document.getElementById('default-target').value;
+  const enableCtrlShortcut = document.getElementById('enable-ctrl-shortcut').checked;
 
   try {
     const settings = await loadSettings();
     settings.defaultTargetLang = defaultTarget;
+    settings.enableCtrlShortcut = enableCtrlShortcut;
     await saveSettings(settings);
     showNotification('Language settings saved', 'success');
   } catch (err) {
@@ -385,6 +387,14 @@ async function loadSettingsUI() {
       document.getElementById('default-target').value = settings.defaultTargetLang;
     }
 
+    // Ctrl shortcut
+    if (settings.enableCtrlShortcut !== undefined) {
+      document.getElementById('enable-ctrl-shortcut').checked = settings.enableCtrlShortcut;
+    } else {
+      // Default to enabled
+      document.getElementById('enable-ctrl-shortcut').checked = true;
+    }
+
     // Cache
     if (settings.cache) {
       document.getElementById('cache-max-entries').value = settings.cache.maxEntries || 500;
@@ -461,7 +471,7 @@ function showNotification(message, type = 'info') {
   setTimeout(() => {
     notification.style.animation = 'slideOut 0.3s ease';
     setTimeout(() => notification.remove(), 300);
-  }, 5000);
+  }, 2000); // Reduced from 5000 to 2000ms
 }
 
 // Add animation styles

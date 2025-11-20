@@ -15,12 +15,14 @@ This document provides AI agents with clear guidelines, patterns, and implementa
 
 Before implementing features, familiarize yourself with:
 
-1. **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - System design and component breakdown
-2. **[CODE_STYLE.md](./docs/CODE_STYLE.md)** - Coding standards and conventions
-3. **[FORMATTING.md](./docs/FORMATTING.md)** - Prettier, ESLint, and pre-commit hooks
-4. **[API_SPECS.md](./docs/API_SPECS.md)** - OpenAI/Claude API integration details
-5. **[MAINTENANCE.md](./docs/MAINTENANCE.md)** - Release and maintenance procedures
-6. **[PROJECT_STATUS.md](./docs/PROJECT_STATUS.md)** - Current implementation status
+1. **[PLAN.md](./docs/PLAN.md)** - Original project plan and specifications
+2. **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - System design and component breakdown
+3. **[CODE_STYLE.md](./docs/CODE_STYLE.md)** - Coding standards and conventions
+4. **[FORMATTING.md](./docs/FORMATTING.md)** - Prettier, ESLint, and pre-commit hooks
+5. **[DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md)** - Visual design specifications and UI components
+6. **[API_SPECS.md](./docs/API_SPECS.md)** - OpenAI/Claude API integration details
+7. **[MAINTENANCE.md](./docs/MAINTENANCE.md)** - Release and maintenance procedures
+8. **[PROJECT_STATUS.md](./docs/PROJECT_STATUS.md)** - Current implementation status
 
 ---
 
@@ -208,11 +210,11 @@ class BaseTranslator {
   constructor(config) {
     this.config = config;
   }
-  
+
   async translate(text, from, to) {
     throw new Error('translate() must be implemented');
   }
-  
+
   buildSystemPrompt(to) {
     return `You are a professional ${to} native translator...`;
   }
@@ -238,7 +240,7 @@ class OpenAITranslator extends BaseTranslator {
         ]
       })
     });
-    
+
     const data = await response.json();
     return data.choices[0].message.content;
   }
@@ -264,22 +266,22 @@ class CacheService {
     this.memoryCache = new MemoryCache(500); // LRU, max 500
     this.persistentCache = new PersistentCache(); // chrome.storage.local
   }
-  
+
   async get(key) {
     // Try memory first
     let value = this.memoryCache.get(key);
     if (value) return value;
-    
+
     // Fallback to persistent
     value = await this.persistentCache.get(key);
     if (value && !this.isExpired(value)) {
       this.memoryCache.set(key, value);
       return value;
     }
-    
+
     return null;
   }
-  
+
   async set(key, value, ttl = 86400000) { // 24h default
     const entry = { value, timestamp: Date.now(), ttl };
     this.memoryCache.set(key, entry);
@@ -297,16 +299,16 @@ class CacheService {
 function showFloatingIcon(selection) {
   const range = selection.getRangeAt(0);
   const rect = range.getBoundingClientRect();
-  
+
   const icon = document.createElement('div');
   icon.className = 'smart-translator-icon';
   icon.style.position = 'absolute';
   icon.style.left = `${rect.left + window.scrollX}px`;
   icon.style.top = `${rect.bottom + window.scrollY + 5}px`;
   icon.style.zIndex = '999999';
-  
+
   icon.addEventListener('mouseenter', () => showMiniPopup(selection));
-  
+
   document.body.appendChild(icon);
 }
 ```
@@ -338,7 +340,7 @@ function createMiniPopup(text, translation) {
       <button class="st-btn-expand">Expand</button>
     </div>
   `;
-  
+
   return popup;
 }
 ```
@@ -617,9 +619,11 @@ You will have successfully implemented the Smart Translator when:
 ## **Additional Resources**
 
 ### **Documentation**
+- [Project Plan](./docs/PLAN.md) - Original specifications and requirements
 - [Architecture Guide](./docs/ARCHITECTURE.md) - Complete system architecture
 - [Code Style Guide](./docs/CODE_STYLE.md) - Coding standards
 - [Formatting Guide](./docs/FORMATTING.md) - Prettier & ESLint setup
+- [Design System](./docs/DESIGN_SYSTEM.md) - Visual design specifications
 - [API Specifications](./docs/API_SPECS.md) - API integration details
 - [Maintenance Guide](./docs/MAINTENANCE.md) - Release procedures
 

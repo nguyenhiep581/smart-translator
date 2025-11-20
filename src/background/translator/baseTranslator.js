@@ -14,7 +14,7 @@
  * @property {string} [config.host] - API host URL (for custom endpoints)
  * @property {string} [config.path] - API path (for custom endpoints)
  * @property {number} [config.temperature=0.3] - Sampling temperature (0-1)
- * @property {number} [config.maxTokens=1000] - Maximum tokens to generate
+ * @property {number} [config.maxTokens=2048] - Maximum tokens to generate
  *
  * @example
  * class MyTranslator extends BaseTranslator {

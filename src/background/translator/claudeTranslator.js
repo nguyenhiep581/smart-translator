@@ -17,7 +17,7 @@
  *   host: 'https://api.anthropic.com',
  *   path: '/v1/messages',
  *   temperature: 0.3,
- *   maxTokens: 1000
+ *   maxTokens: 2048
  * });
  *
  * // Basic translation
@@ -75,7 +75,7 @@ export class ClaudeTranslator extends BaseTranslator {
         },
         body: JSON.stringify({
           model: this.config.model || 'claude-3-sonnet-20240229',
-          max_tokens: this.config.maxTokens || 1000,
+          max_tokens: this.config.maxTokens || 2048,
           temperature: this.config.temperature || 0.3,
           system: this.buildSystemPrompt(to),
           messages: [

@@ -3,11 +3,8 @@
   "name": "Smart Translator",
   "version": "1.0.0",
   "description": "Translate selected text using OpenAI, Claude, or Custom providers.",
-  "permissions": [
-    "storage",
-    "activeTab",
-    "scripting"
-  ],
+  "author": "nguyenhiep",
+  "permissions": ["storage", "activeTab", "scripting"],
   "background": {
     "service_worker": "background.js",
     "type": "module"

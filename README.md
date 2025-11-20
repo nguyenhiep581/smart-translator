@@ -2,6 +2,8 @@
 
 A high-performance Chrome Extension for AI-powered translation with DeepL-style user experience.
 
+**Author:** nguyenhiep
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Extension-blue)](https://chrome.google.com/webstore)
 

@@ -12,6 +12,22 @@ let currentTranslation = null;
 let expandPanel = null;
 
 /**
+ * Check if mini popup is currently visible
+ * @returns {boolean}
+ */
+export function isMiniPopupVisible() {
+  return miniPopup !== null && document.body.contains(miniPopup);
+}
+
+/**
+ * Check if expand panel is currently open
+ * @returns {boolean}
+ */
+export function isExpandPanelOpen() {
+  return expandPanel !== null && expandPanel.isOpen;
+}
+
+/**
  * Show mini popup with translation
  * @param {object} selection - Selection object
  */

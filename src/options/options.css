@@ -229,6 +229,27 @@ body {
   font-weight: 500;
 }
 
+.form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--st-text-primary);
+  margin-bottom: 4px;
+}
+
+.form-checkbox input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--st-primary);
+}
+
+.form-checkbox span {
+  font-weight: 500;
+}
+
 .form-input,
 .form-select,
 .form-textarea {

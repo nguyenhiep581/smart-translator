@@ -21,7 +21,7 @@
     "claude",
     "deepl"
   ],
-  "author": "",
+  "author": "nguyenhiep",
   "license": "MIT",
   "devDependencies": {
     "vite": "^5.0.0",

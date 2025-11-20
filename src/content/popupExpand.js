@@ -88,9 +88,9 @@ export class ExpandPanel {
               </div>
             </div>
             <div class="st-pane-body">
-              <textarea 
-                id="expand-source" 
-                class="st-expand-textarea" 
+              <textarea
+                id="expand-source"
+                class="st-expand-textarea"
                 readonly
               ></textarea>
             </div>
@@ -111,8 +111,8 @@ export class ExpandPanel {
               </select>
             </div>
             <div class="st-pane-body">
-              <textarea 
-                id="expand-target" 
+              <textarea
+                id="expand-target"
                 class="st-expand-textarea"
                 placeholder="Translation will appear here..."
               ></textarea>

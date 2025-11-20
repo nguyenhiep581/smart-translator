@@ -17,7 +17,7 @@
  *   host: 'https://api.openai.com',
  *   path: '/v1/chat/completions',
  *   temperature: 0.3,
- *   maxTokens: 1000
+ *   maxTokens: 2048
  * });
  *
  * // Basic translation
@@ -94,7 +94,7 @@ export class OpenAITranslator extends BaseTranslator {
             },
           ],
           temperature: this.config.temperature || 0.3,
-          max_tokens: this.config.maxTokens || 1000,
+          max_tokens: this.config.maxTokens || 2048,
           stream: !!onStream,
         }),
       });
