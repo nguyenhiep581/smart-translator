@@ -1,15 +1,32 @@
-# 🤖 **AGENT.md — AI Agent Implementation Guide**
+# 🤖 **AGENTS.md — AI Agent Implementation Guide**
 
 ---
 
 ## **Purpose**
-This document provides AI agents with clear guidelines, patterns, and implementation instructions for building the Smart Translator Chrome Extension based on PLAN.md.
+This document provides AI agents with clear guidelines, patterns, and implementation instructions for working with the Smart Translator Chrome Extension.
+
+**Status**: ✅ Project Complete (v1.0.0) - All core features implemented
+
+**Last Updated**: November 21, 2025
+
+---
+
+## **📚 Documentation Index**
+
+Before implementing features, familiarize yourself with:
+
+1. **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - System design and component breakdown
+2. **[CODE_STYLE.md](./docs/CODE_STYLE.md)** - Coding standards and conventions
+3. **[FORMATTING.md](./docs/FORMATTING.md)** - Prettier, ESLint, and pre-commit hooks
+4. **[API_SPECS.md](./docs/API_SPECS.md)** - OpenAI/Claude API integration details
+5. **[MAINTENANCE.md](./docs/MAINTENANCE.md)** - Release and maintenance procedures
+6. **[PROJECT_STATUS.md](./docs/PROJECT_STATUS.md)** - Current implementation status
 
 ---
 
 # #️⃣ **1. Agent Role & Objectives**
 
-You are an expert Chrome Extension developer tasked with implementing a **DeepL-style translation extension** with the following priorities:
+You are an expert Chrome Extension developer working on a **production-ready DeepL-style translation extension** with these priorities:
 
 1. **Clean Architecture** — Modular, maintainable code
 2. **Performance** — Fast translations with smart caching
@@ -19,42 +36,133 @@ You are an expert Chrome Extension developer tasked with implementing a **DeepL-
 
 ---
 
-# #️⃣ **2. Implementation Workflow**
+# #️⃣ **2. Project Structure**
 
-Follow this sequence when building features:
+## **Current Implementation Status**
 
-## **Phase 1: Foundation**
-1. Set up project structure with Vite + pnpm
-2. Configure Manifest V3
-3. Implement storage utilities
-4. Create base translator interface
+All core features are ✅ **COMPLETE**:
 
-## **Phase 2: Core Translation**
-1. Background service worker setup
-2. Implement OpenAI/Claude/Custom translators
-3. Build cache system (memory + persistent)
-4. Add language detection
+- ✅ Background service worker with message routing
+- ✅ OpenAI & Claude translator implementations
+- ✅ Two-layer caching (LRU memory + persistent storage)
+- ✅ Language detection (offline franc-min + API fallback)
+- ✅ Content script UI (floating icon, mini popup, expand panel)
+- ✅ Options page with full configuration
+- ✅ Popup page with quick translate
+- ✅ Debug logging system with toggle
+- ✅ Telemetry and statistics
+- ✅ Pre-commit hooks (Husky + lint-staged)
+- ✅ Prettier + ESLint configuration
+- ✅ Build system (Vite dual-build)
 
-## **Phase 3: Content Script UI**
-1. Text selection detection
-2. Floating icon component
-3. Mini popup UI (DeepL-style)
-4. Expand mode panel
+## **Directory Structure**
 
-## **Phase 4: Extension UI**
-1. Popup page (history, quick settings)
-2. Options page (full configuration)
-3. Styling (enterprise minimal theme)
-
-## **Phase 5: Polish**
-1. Keyboard shortcuts
-2. Error handling & logging
-3. Telemetry (local stats)
-4. Build & packaging scripts
+```
+smart-translator/
+├── src/
+│   ├── background/              # Service Worker
+│   │   ├── background.js        # Main entry point
+│   │   ├── backgroundMessageRouter.js  # Message handler
+│   │   ├── cache/              # Two-layer cache system
+│   │   │   ├── cacheService.js      # Cache orchestrator
+│   │   │   ├── memoryCache.js       # LRU (max 500)
+│   │   │   └── persistentCache.js   # chrome.storage.local
+│   │   ├── services/
+│   │   │   ├── detectLanguage.js    # franc-min + API
+│   │   │   └── telemetry.js         # Usage stats
+│   │   └── translator/
+│   │       ├── baseTranslator.js    # Abstract base
+│   │       ├── openAITranslator.js  # OpenAI impl
+│   │       └── claudeTranslator.js  # Claude impl
+│   │
+│   ├── content/                # Content Scripts
+│   │   ├── content.js          # Main entry
+│   │   ├── floatingIcon.js     # Selection icon
+│   │   ├── miniPopup.js        # Translation popup
+│   │   ├── popupExpand.js      # Full editor
+│   │   ├── ui.css              # Styles
+│   │   └── expandPanel.css     # Expand styles
+│   │
+│   ├── popup/                  # Toolbar popup
+│   │   ├── popup.html
+│   │   ├── popup.js
+│   │   └── popup.css
+│   │
+│   ├── options/                # Settings page
+│   │   ├── options.html
+│   │   ├── options.js
+│   │   └── options.css
+│   │
+│   ├── utils/                  # Shared utilities
+│   │   ├── storage.js          # Chrome storage wrapper
+│   │   ├── logger.js           # Debug logging (controlled)
+│   │   ├── dom.js              # DOM helpers
+│   │   └── hashing.js          # SHA-256 for cache keys
+│   │
+│   └── config/
+│       └── defaults.js         # Default settings
+│
+├── docs/                       # Documentation (11 files)
+├── public/                     # Static assets
+│   ├── manifest.json
+│   └── icons/
+├── dist/                       # Build output
+├── .husky/                     # Git hooks
+│   └── pre-commit             # Auto format/lint
+├── .prettierrc                # Prettier config
+├── .eslintrc.json            # ESLint config
+├── .editorconfig             # Editor settings
+├── vite.config.js            # Dual-build config
+├── package.json              # Dependencies
+└── Makefile                  # Build commands
+```
 
 ---
 
-# #️⃣ **3. Key Implementation Patterns**
+# #️⃣ **3. Implementation Workflow**
+
+## **For New Features**
+
+Follow this sequence when building features:
+
+## **Phase 1: Foundation** ✅ COMPLETE
+1. ✅ Set up project structure with Vite + pnpm
+2. ✅ Configure Manifest V3
+3. ✅ Implement storage utilities
+4. ✅ Create base translator interface
+
+## **Phase 2: Core Translation** ✅ COMPLETE
+1. ✅ Background service worker setup
+2. ✅ Implement OpenAI/Claude/Custom translators
+3. ✅ Build cache system (memory + persistent)
+4. ✅ Add language detection (offline + API)
+5. ✅ Add 30-second timeout protection
+6. ✅ Optimize system prompts (75 chars)
+
+## **Phase 3: Content Script UI** ✅ COMPLETE
+1. ✅ Text selection detection
+2. ✅ Floating icon component
+3. ✅ Mini popup UI (DeepL-style)
+4. ✅ Expand mode panel
+5. ✅ Typewriter animation effect
+6. ✅ Copy/Replace/Expand actions
+
+## **Phase 4: Extension UI** ✅ COMPLETE
+1. ✅ Popup page (history, quick settings)
+2. ✅ Options page (full configuration)
+3. ✅ Styling (enterprise minimal theme)
+4. ✅ Debug mode toggle
+
+## **Phase 5: Polish** ✅ COMPLETE
+1. ✅ Error handling & logging (logger utility)
+2. ✅ Telemetry (local stats)
+3. ✅ Build & packaging scripts
+4. ✅ Pre-commit hooks (Husky + lint-staged)
+5. ✅ Code formatting (Prettier + ESLint)
+
+---
+
+# #️⃣ **4. Key Implementation Patterns**
 
 ## **3.1 Message Communication**
 
@@ -251,16 +359,20 @@ function createMiniPopup(text, translation) {
 - CSS classes: `kebab-case` with prefix (e.g., `st-mini-popup`)
 
 ## **4.3 Error Handling**
-Always wrap async operations:
+Always wrap async operations and use the logger utility:
 ```javascript
+import { error as logError } from '../utils/logger.js';
+
 try {
   const result = await translator.translate(text, from, to);
   return { success: true, data: result };
-} catch (error) {
-  logger.error('Translation failed:', error);
-  return { success: false, error: error.message };
+} catch (err) {
+  logError('Translation failed:', err);
+  return { success: false, error: err.message };
 }
 ```
+
+**Important**: Use `logger.error()` instead of `console.error()` for all logging. The logger respects debug mode settings.
 
 ## **4.4 Security Practices**
 - **Never** log API keys
@@ -319,19 +431,54 @@ Before marking a feature complete, verify:
 
 ## **7.1 Makefile Commands**
 ```makefile
-.PHONY: dev build zip clean
+# Development
+make dev          # Build and watch for changes
+make watch        # Dual-build watch mode
 
-dev:
-	pnpm run dev
+# Production
+make build        # Build for production
+make zip          # Create distribution package
 
-build:
-	pnpm run build
+# Code Quality
+make format       # Format code with Prettier
+make lint         # Lint code with ESLint
+make lint-fix     # Auto-fix linting issues
+make check        # Run format + lint checks
+make pre-commit   # Test pre-commit hooks
 
-zip:
-	cd dist && zip -r ../smart-translator.zip .
+# Maintenance
+make clean        # Remove build artifacts
+make install      # Install dependencies
+```
 
-clean:
-	rm -rf dist node_modules
+## **7.2 Pre-commit Hooks**
+
+The project uses **Husky** and **lint-staged** to automatically format and lint code before commits:
+
+```bash
+# Just commit normally - hooks run automatically
+git add .
+git commit -m "Your message"
+
+# Hooks will:
+# 1. Format staged files with Prettier
+# 2. Lint and fix staged JS files with ESLint
+# 3. Prevent commit if errors exist
+```
+
+**Configuration** (in `package.json`):
+```json
+{
+  "lint-staged": {
+    "src/**/*.js": [
+      "prettier --write",
+      "eslint --fix --max-warnings 100"
+    ],
+    "src/**/*.{css,html,json}": [
+      "prettier --write"
+    ]
+  }
+}
 ```
 
 ## **7.2 Vite Configuration**
@@ -389,7 +536,54 @@ Focus on these for the first working version:
 
 ---
 
-# #️⃣ **10. Example Task Breakdown**
+# #️⃣ **10. Code Quality & Formatting**
+
+## **10.1 Prettier Configuration**
+
+```json
+{
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "es5",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "arrowParens": "always",
+  "endOfLine": "lf"
+}
+```
+
+## **10.2 ESLint Rules**
+
+Key rules to follow:
+- `no-console`: warn (use logger instead)
+- `no-unused-vars`: warn
+- `prefer-const`: error
+- `no-var`: error
+- `eqeqeq`: error (use `===`)
+- `curly`: error (always use braces)
+- `quotes`: error (single quotes)
+- `semi`: error (always semicolons)
+- `max-len`: warn (100 chars)
+
+## **10.3 Logger Utility**
+
+All console statements should use the logger:
+
+```javascript
+import { debug, info, warn, error as logError } from '../utils/logger.js';
+
+// Instead of console.log
+debug('Debug message:', data);
+
+// Instead of console.error
+logError('Error occurred:', err);
+```
+
+The logger respects the debug mode setting and can be toggled in Options → About.
+
+---
+
+# #️⃣ **11. Example Task Breakdown**
 
 When implementing a feature, break it down like this:
 
@@ -407,18 +601,29 @@ When implementing a feature, break it down like this:
 
 You will have successfully implemented the Smart Translator when:
 
-- [ ] User can select text and see the floating icon
-- [ ] Hovering icon shows mini popup with translation
-- [ ] Translation is fast (< 2s with cache, < 5s without)
-- [ ] UI matches DeepL quality and smoothness
-- [ ] Options page allows full provider configuration
-- [ ] Code is modular and well-documented
-- [ ] Extension can be built with `make build` and loaded in Chrome
+- [x] User can select text and see the floating icon
+- [x] Hovering icon shows mini popup with translation
+- [x] Translation is fast (< 2s with cache, < 5s without)
+- [x] UI matches DeepL quality and smoothness
+- [x] Options page allows full provider configuration
+- [x] Code is modular and well-documented
+- [x] Extension can be built with `make build` and loaded in Chrome
+- [x] Pre-commit hooks automatically format and lint code
+- [x] All console statements use logger utility
+- [x] Debug mode can be toggled in settings
 
 ---
 
 ## **Additional Resources**
 
+### **Documentation**
+- [Architecture Guide](./docs/ARCHITECTURE.md) - Complete system architecture
+- [Code Style Guide](./docs/CODE_STYLE.md) - Coding standards
+- [Formatting Guide](./docs/FORMATTING.md) - Prettier & ESLint setup
+- [API Specifications](./docs/API_SPECS.md) - API integration details
+- [Maintenance Guide](./docs/MAINTENANCE.md) - Release procedures
+
+### **External Resources**
 - Chrome Extension Docs: https://developer.chrome.com/docs/extensions/
 - OpenAI API: https://platform.openai.com/docs/api-reference
 - Claude API: https://docs.anthropic.com/claude/reference
