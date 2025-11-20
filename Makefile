@@ -1,4 +1,4 @@
-.PHONY: dev build zip clean install watch-content format lint check
+.PHONY: dev build zip clean install watch-content format lint check pre-commit
 
 install:
 	pnpm install
@@ -35,6 +35,10 @@ lint-fix:
 check:
 	@echo "Running format and lint checks..."
 	pnpm run check
+
+pre-commit:
+	@echo "Running pre-commit checks (same as git commit)..."
+	pnpm exec lint-staged
 
 build:
 	@echo "Building main bundle..."

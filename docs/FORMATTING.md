@@ -26,6 +26,56 @@ pnpm install
 This installs:
 - `prettier@^3.1.0` - Code formatter
 - `eslint@^8.55.0` - Code linter
+- `husky@^9.0.0` - Git hooks manager
+- `lint-staged@^15.2.0` - Run linters on staged files
+
+---
+
+## **🪝 Pre-commit Hooks (Automatic)**
+
+This project uses **Husky** and **lint-staged** to automatically format and lint your code before each commit.
+
+### **What Happens on Commit**
+
+When you run `git commit`, the pre-commit hook automatically:
+1. ✅ Formats staged `.js`, `.css`, `.html`, `.json` files with Prettier
+2. ✅ Lints and auto-fixes staged `.js` files with ESLint
+3. ✅ Only commits if there are no errors (warnings are allowed)
+
+### **Example**
+
+```bash
+git add .
+git commit -m "Add new feature"
+
+# Output:
+# ✔ Backed up original state in git stash
+# ✔ Running tasks for staged files...
+#   ✔ prettier --write
+#   ✔ eslint --fix --max-warnings 100
+# ✔ Applying modifications from tasks...
+# [main abc1234] Add new feature
+```
+
+### **Manual Pre-commit Check**
+
+Test what the pre-commit hook will do without committing:
+
+```bash
+make pre-commit
+# or
+pnpm exec lint-staged
+```
+
+### **Bypass Pre-commit Hook (Not Recommended)**
+
+If you absolutely need to skip the hook:
+
+```bash
+git commit --no-verify -m "Emergency fix"
+```
+
+⚠️ **Warning**: Only use `--no-verify` in emergencies. Your code should always pass formatting and linting checks.
 
 ---
 
@@ -66,6 +116,15 @@ pnpm run lint:fix
 make check
 # or
 pnpm run check
+```
+
+### **Test Pre-commit Hook**
+
+```bash
+# Run the same checks that happen on git commit
+make pre-commit
+# or
+pnpm exec lint-staged
 ```
 
 ---
@@ -176,12 +235,37 @@ Install the EditorConfig plugin for your editor.
 
 ## **📝 Git Workflow**
 
-### **Pre-commit Checks**
+### **Automatic Pre-commit Checks**
 
-Before committing, run:
+The project is configured with **Husky** to automatically run checks before every commit:
 
 ```bash
-# Check everything
+# Just commit normally - hooks run automatically
+git add .
+git commit -m "Your commit message"
+
+# The pre-commit hook will:
+# 1. Format staged files with Prettier
+# 2. Lint and auto-fix staged JS files with ESLint
+# 3. Prevent commit if there are errors
+```
+
+### **What Gets Checked**
+
+- **JavaScript files** (`.js`): Prettier + ESLint
+- **CSS files** (`.css`): Prettier only
+- **HTML files** (`.html`): Prettier only
+- **JSON files** (`.json`): Prettier only
+
+### **Manual Pre-commit Checks**
+
+Before committing, you can manually run:
+
+```bash
+# Run the exact same checks as pre-commit hook
+make pre-commit
+
+# Or check everything (all files, not just staged)
 make check
 
 # If issues found, auto-fix
@@ -192,25 +276,33 @@ make lint-fix
 make check
 ```
 
-### **Optional: Git Hooks**
+### **Troubleshooting Commits**
 
-You can set up automatic checks using git hooks. Create `.git/hooks/pre-commit`:
+**Issue: Commit blocked by lint errors**
 
 ```bash
-#!/bin/sh
-echo "Running format and lint checks..."
-make check
-if [ $? -ne 0 ]; then
-  echo "❌ Format/lint checks failed. Please fix and try again."
-  echo "Run: make format && make lint-fix"
-  exit 1
-fi
+# Fix the errors
+make lint-fix
+
+# Re-stage the fixed files
+git add .
+
+# Try commit again
+git commit -m "Your message"
 ```
 
-Make it executable:
+**Issue: Need to commit urgently despite errors**
+
 ```bash
-chmod +x .git/hooks/pre-commit
+# Use --no-verify flag (NOT RECOMMENDED)
+git commit --no-verify -m "Emergency fix"
 ```
+
+⚠️ **Only use `--no-verify` in emergencies!**
+
+### **Optional: Manual Git Hooks**
+
+The automatic hooks are in `.husky/pre-commit`. If you need custom hooks, edit this file.
 
 ---
 
