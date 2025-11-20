@@ -5,7 +5,7 @@
 import { createElement, escapeHtml, positionNearRect } from '../utils/dom.js';
 import { LANGUAGES } from '../config/defaults.js';
 import { ExpandPanel } from './popupExpand.js';
-import { debug } from '../utils/logger.js';
+import { debug, error as logError } from '../utils/logger.js';
 
 let miniPopup = null;
 let currentTranslation = null;
@@ -225,7 +225,7 @@ async function copyTranslation() {
       btn.textContent = originalText;
     }, 2000);
   } catch (err) {
-    console.error('Copy failed:', err);
+    logError('Copy failed:', err);
   }
 }
 
@@ -242,7 +242,7 @@ function replaceSelection(selection) {
     selection.range.insertNode(document.createTextNode(currentTranslation));
     hideMiniPopup();
   } catch (err) {
-    console.error('Replace failed:', err);
+    logError('Replace failed:', err);
   }
 }
 

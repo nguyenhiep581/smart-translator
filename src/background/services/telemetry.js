@@ -3,6 +3,7 @@
  */
 
 import { getStorage, setStorage } from '../../utils/storage.js';
+import { error as logError } from '../../utils/logger.js';
 
 const TELEMETRY_KEY = 'telemetry';
 const MAX_ENTRIES = 100;
@@ -39,7 +40,7 @@ export async function getStats() {
       lastProvider: telemetry[telemetry.length - 1]?.provider || 'none',
     };
   } catch (err) {
-    console.error('Get telemetry stats error:', err);
+    logError('Get telemetry stats error:', err);
     return {
       totalRequests: 0,
       cacheHits: 0,

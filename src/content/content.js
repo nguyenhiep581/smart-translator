@@ -14,7 +14,7 @@ import { showFloatingIcon, hideFloatingIcon } from './floatingIcon.js';
     initLogger(debugMode);
     debug('Content script initialized with debug mode:', debugMode);
   } catch (err) {
-    console.error('Failed to initialize logger:', err);
+    error('Failed to initialize logger:', err);
   }
 })();
 

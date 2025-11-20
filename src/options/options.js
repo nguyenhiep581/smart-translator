@@ -3,6 +3,7 @@
  */
 
 import { loadSettings, saveSettings } from '../utils/storage.js';
+import { error as logError } from '../utils/logger.js';
 
 // Navigation
 document.querySelectorAll('.nav-item').forEach((item) => {
@@ -398,7 +399,7 @@ async function loadSettingsUI() {
       document.getElementById('debug-mode').checked = settings.debugMode;
     }
   } catch (err) {
-    console.error('Load settings failed:', err);
+    logError('Load settings failed:', err);
   }
 }
 
@@ -412,7 +413,7 @@ async function loadCacheStats() {
       document.getElementById('cache-persistent-count').textContent = stats.persistentSize || 0;
     }
   } catch (err) {
-    console.error('Load cache stats failed:', err);
+    logError('Load cache stats failed:', err);
   }
 }
 
@@ -428,7 +429,7 @@ async function loadTelemetry() {
       document.getElementById('errors').textContent = stats.errors || 0;
     }
   } catch (err) {
-    console.error('Load telemetry failed:', err);
+    logError('Load telemetry failed:', err);
   }
 }
 

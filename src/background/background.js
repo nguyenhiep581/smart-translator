@@ -2,7 +2,7 @@
  * Background Service Worker - Main entry point
  */
 
-import { initLogger, info, error } from '../utils/logger.js';
+import { initLogger, info } from '../utils/logger.js';
 import { getStorage, setStorage } from '../utils/storage.js';
 import { DEFAULT_CONFIG } from '../config/defaults.js';
 import { handleMessage } from './backgroundMessageRouter.js';

@@ -2,6 +2,8 @@
  * Popup Script
  */
 
+import { error as logError } from '../utils/logger.js';
+
 // Navigation
 document.querySelectorAll('.nav-item').forEach((item) => {
   item.addEventListener('click', () => {
@@ -62,7 +64,7 @@ document.getElementById('copy-output').addEventListener('click', async () => {
       btn.textContent = original;
     }, 2000);
   } catch (err) {
-    console.error('Copy failed:', err);
+    logError('Copy failed:', err);
   }
 });
 
@@ -94,7 +96,7 @@ async function loadSettings() {
         config.provider.charAt(0).toUpperCase() + config.provider.slice(1);
     }
   } catch (err) {
-    console.error('Load settings failed:', err);
+    logError('Load settings failed:', err);
   }
 }
 
@@ -104,7 +106,7 @@ async function loadCacheStatus() {
     // This would need a new message type to get cache stats
     document.getElementById('cache-status').textContent = 'Enabled';
   } catch (err) {
-    console.error('Load cache status failed:', err);
+    logError('Load cache status failed:', err);
   }
 }
 

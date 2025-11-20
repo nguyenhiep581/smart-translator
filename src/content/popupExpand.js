@@ -2,7 +2,7 @@
  * Expand Mode Panel - Full Translation Editor
  */
 
-import { debug } from '../utils/logger.js';
+import { debug, error as logError } from '../utils/logger.js';
 
 export class ExpandPanel {
   constructor() {
@@ -179,7 +179,7 @@ export class ExpandPanel {
         await navigator.clipboard.writeText(text);
         this.showNotification('Copied to clipboard');
       } catch (err) {
-        console.error('Copy failed:', err);
+        logError('Copy failed:', err);
       }
     });
 

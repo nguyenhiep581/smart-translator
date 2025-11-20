@@ -3,6 +3,7 @@
  */
 
 import { getStorage, setStorage } from '../../utils/storage.js';
+import { error as logError } from '../../utils/logger.js';
 
 const CACHE_KEY_PREFIX = 'cache_';
 
@@ -35,7 +36,7 @@ export class PersistentCache {
 
       return entry.value;
     } catch (err) {
-      console.error('Persistent cache get error:', err);
+      logError('Persistent cache get error:', err);
       return null;
     }
   }
@@ -57,7 +58,7 @@ export class PersistentCache {
 
       await setStorage({ [storageKey]: entry });
     } catch (err) {
-      console.error('Persistent cache set error:', err);
+      logError('Persistent cache set error:', err);
     }
   }
 
@@ -82,7 +83,7 @@ export class PersistentCache {
       const storageKey = `${CACHE_KEY_PREFIX}${key}`;
       await chrome.storage.local.remove(storageKey);
     } catch (err) {
-      console.error('Persistent cache delete error:', err);
+      logError('Persistent cache delete error:', err);
     }
   }
 
@@ -98,7 +99,7 @@ export class PersistentCache {
         await chrome.storage.local.remove(cacheKeys);
       }
     } catch (err) {
-      console.error('Persistent cache clear error:', err);
+      logError('Persistent cache clear error:', err);
     }
   }
 
@@ -116,7 +117,7 @@ export class PersistentCache {
         size: await chrome.storage.local.getBytesInUse(cacheEntries),
       };
     } catch (err) {
-      console.error('Persistent cache stats error:', err);
+      logError('Persistent cache stats error:', err);
       return { count: 0, size: 0 };
     }
   }

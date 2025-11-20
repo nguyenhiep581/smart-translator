@@ -4,6 +4,7 @@
  */
 
 import { franc } from 'franc-min';
+import { error as logError } from '../../utils/logger.js';
 
 /**
  * Map franc language codes to ISO 639-1
@@ -60,7 +61,7 @@ function detectOffline(text) {
     // Map to ISO 639-1
     return FRANC_TO_ISO[detected] || 'auto';
   } catch (err) {
-    console.error('Offline detection error:', err);
+    logError('Offline detection error:', err);
     return 'auto';
   }
 }
@@ -83,7 +84,7 @@ async function detectWithAPI(text, config) {
     // Fallback to offline
     return detectOffline(text);
   } catch (err) {
-    console.error('API detection error:', err);
+    logError('API detection error:', err);
     return detectOffline(text);
   }
 }
