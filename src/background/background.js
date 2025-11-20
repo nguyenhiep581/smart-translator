@@ -10,13 +10,13 @@ import { handleMessage } from './backgroundMessageRouter.js';
 // Initialize on install
 chrome.runtime.onInstalled.addListener(async (details) => {
   info('Extension installed/updated:', details.reason);
-  
+
   // Set default config on first install
   if (details.reason === 'install') {
     await setStorage({ config: DEFAULT_CONFIG });
     info('Default configuration saved');
   }
-  
+
   // Load config and initialize logger
   const { config } = await getStorage('config');
   initLogger(config?.debugMode || false);

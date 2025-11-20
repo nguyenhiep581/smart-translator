@@ -1,302 +1,375 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Translator Settings</title>
-  <link rel="stylesheet" href="options.css">
-</head>
-<body>
-  <div class="options-container">
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <h1 class="app-name">Smart Translator</h1>
-        <div class="app-version">v1.0.0</div>
-      </div>
-
-      <nav class="sidebar-nav">
-        <button class="nav-item active" data-section="provider">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="currentColor" stroke-width="2"/>
-          </svg>
-          Provider Settings
-        </button>
-        <button class="nav-item" data-section="language">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" stroke="currentColor" stroke-width="2"/>
-          </svg>
-          Language
-        </button>
-        <button class="nav-item" data-section="cache">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" stroke="currentColor" stroke-width="2"/>
-          </svg>
-          Cache
-        </button>
-        <button class="nav-item" data-section="telemetry">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke="currentColor" stroke-width="2"/>
-          </svg>
-          Analytics
-        </button>
-        <button class="nav-item" data-section="about">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2"/>
-          </svg>
-          About
-        </button>
-      </nav>
-    </aside>
-
-    <main class="main-content">
-      <!-- Provider Settings Section -->
-      <section class="section active" id="provider-section">
-        <div class="section-header">
-          <h2 class="section-title">Provider Settings</h2>
-          <button id="save-provider" class="btn btn-primary">Save Settings</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Translator Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="options-container">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h1 class="app-name">Smart Translator</h1>
+          <div class="app-version">v1.0.0</div>
         </div>
-        
-        <div class="card">
-          <h3 class="card-title">Select AI Provider</h3>
-          <div class="provider-options">
-            <label class="provider-option">
-              <input type="radio" name="provider" value="openai" />
-              <div class="provider-card">
-                <div class="provider-name">OpenAI</div>
-                <div class="provider-desc">GPT-3.5 / GPT-4</div>
+
+        <nav class="sidebar-nav">
+          <button class="nav-item active" data-section="provider">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="currentColor" stroke-width="2" />
+            </svg>
+            Provider Settings
+          </button>
+          <button class="nav-item" data-section="language">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+            </svg>
+            Language
+          </button>
+          <button class="nav-item" data-section="cache">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+            </svg>
+            Cache
+          </button>
+          <button class="nav-item" data-section="telemetry">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+            </svg>
+            Analytics
+          </button>
+          <button class="nav-item" data-section="about">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+            </svg>
+            About
+          </button>
+        </nav>
+      </aside>
+
+      <main class="main-content">
+        <!-- Provider Settings Section -->
+        <section class="section active" id="provider-section">
+          <div class="section-header">
+            <h2 class="section-title">Provider Settings</h2>
+            <button id="save-provider" class="btn btn-primary">Save Settings</button>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">Select AI Provider</h3>
+            <div class="provider-options">
+              <label class="provider-option">
+                <input type="radio" name="provider" value="openai" />
+                <div class="provider-card">
+                  <div class="provider-name">OpenAI</div>
+                </div>
+              </label>
+              <label class="provider-option">
+                <input type="radio" name="provider" value="claude" />
+                <div class="provider-card">
+                  <div class="provider-name">Claude</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div class="card" id="openai-config" style="display: none">
+            <h3 class="card-title">OpenAI Configuration</h3>
+            <div class="form-group">
+              <label class="form-label">API Host (Optional)</label>
+              <input
+                type="url"
+                id="openai-host"
+                class="form-input"
+                placeholder="https://api.openai.com"
+              />
+              <div class="form-help">For custom OpenAI-compatible APIs (Azure, LocalAI, etc.)</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">API Path (Optional)</label>
+              <input
+                type="text"
+                id="openai-path"
+                class="form-input"
+                placeholder="/v1/chat/completions"
+              />
+              <div class="form-help">Leave empty to use default path</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">API Key</label>
+              <input type="password" id="openai-api-key" class="form-input" placeholder="sk-..." />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Model</label>
+              <select id="openai-model" class="form-select">
+                <option value="gpt-5-mini">GPT-5 Mini</option>
+                <option value="gpt-4-turbo-preview">GPT-4 Turbo</option>
+                <option value="gpt-4">GPT-4</option>
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <button id="openai-get-models" class="btn btn-secondary btn-sm">
+                Get Available Models
+              </button>
+            </div>
+            <div class="form-group">
+              <button id="openai-test-connection" class="btn btn-ghost btn-sm">
+                Test Connection
+              </button>
+            </div>
+          </div>
+
+          <div class="card" id="claude-config" style="display: none">
+            <h3 class="card-title">Claude Configuration</h3>
+            <div class="form-group">
+              <label class="form-label">API Host (Optional)</label>
+              <input
+                type="url"
+                id="claude-host"
+                class="form-input"
+                placeholder="https://api.anthropic.com"
+              />
+              <div class="form-help">For custom Claude-compatible APIs</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">API Path (Optional)</label>
+              <input type="text" id="claude-path" class="form-input" placeholder="/v1/messages" />
+              <div class="form-help">Leave empty to use default path</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">API Key</label>
+              <input
+                type="password"
+                id="claude-api-key"
+                class="form-input"
+                placeholder="sk-ant-..."
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Model</label>
+              <select id="claude-model" class="form-select">
+                <option value="claude-haiku-4-5-20251001">Claude 4.5 Haiku</option>
+                <option value="claude-3-opus-20240229">Claude 3 Opus</option>
+                <option value="claude-3-sonnet-20240229">Claude 3 Sonnet</option>
+                <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <button id="claude-get-models" class="btn btn-secondary btn-sm">
+                Get Available Models
+              </button>
+            </div>
+            <div class="form-group">
+              <button id="claude-test-connection" class="btn btn-ghost btn-sm">
+                Test Connection
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">System Prompt</h3>
+            <div class="form-group">
+              <label class="form-label">Custom Instructions (Optional)</label>
+              <textarea
+                id="system-prompt"
+                class="form-textarea"
+                rows="4"
+                placeholder="You are a professional translator..."
+              ></textarea>
+              <div class="form-help">Leave empty to use default prompt</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Language Section -->
+        <section class="section" id="language-section" style="display: none">
+          <div class="section-header">
+            <h2 class="section-title">Language Settings</h2>
+            <button id="save-language" class="btn btn-primary">Save Settings</button>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">Default Target Language</h3>
+            <div class="form-group">
+              <select id="default-target" class="form-select">
+                <option value="en">English</option>
+                <option value="ja">Japanese</option>
+                <option value="vi">Vietnamese</option>
+                <option value="zh">Chinese</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">Supported Languages</h3>
+            <div class="info-box">
+              <p>This extension supports the following target languages:</p>
+              <ul class="lang-list">
+                <li>🇬🇧 English (en)</li>
+                <li>🇯🇵 Japanese (ja)</li>
+                <li>🇻🇳 Vietnamese (vi)</li>
+                <li>🇨🇳 Chinese (zh)</li>
+              </ul>
+              <p class="info-note">Source language detection is automatic</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Cache Section -->
+        <section class="section" id="cache-section" style="display: none">
+          <div class="section-header">
+            <h2 class="section-title">Cache Settings</h2>
+            <button id="save-cache" class="btn btn-primary">Save Settings</button>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">Memory Cache</h3>
+            <div class="form-group">
+              <label class="form-label">Max Entries</label>
+              <input
+                type="number"
+                id="cache-max-entries"
+                class="form-input"
+                value="500"
+                min="100"
+                max="2000"
+              />
+              <div class="form-help">Maximum translations to keep in memory</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">Persistent Cache</h3>
+            <div class="form-group">
+              <label class="form-label">TTL (Time to Live)</label>
+              <div class="input-group">
+                <input type="number" id="cache-ttl" class="form-input" value="7" min="1" max="90" />
+                <span class="input-suffix">days</span>
               </div>
-            </label>
-            <label class="provider-option">
-              <input type="radio" name="provider" value="claude" />
-              <div class="provider-card">
-                <div class="provider-name">Claude</div>
-                <div class="provider-desc">Claude 3 Sonnet/Opus</div>
+              <div class="form-help">How long to store translations</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">Cache Statistics</h3>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-value" id="cache-memory-count">-</div>
+                <div class="stat-label">Memory Cache</div>
               </div>
-            </label>
+              <div class="stat-card">
+                <div class="stat-value" id="cache-persistent-count">-</div>
+                <div class="stat-label">Persistent Cache</div>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div class="card" id="openai-config" style="display: none;">
-          <h3 class="card-title">OpenAI Configuration</h3>
-          <div class="form-group">
-            <label class="form-label">API Host (Optional)</label>
-            <input type="url" id="openai-host" class="form-input" placeholder="https://api.openai.com">
-            <div class="form-help">For custom OpenAI-compatible APIs (Azure, LocalAI, etc.)</div>
+          <div class="card">
+            <h3 class="card-title">Cache Actions</h3>
+            <div class="form-group">
+              <button id="clear-cache" class="btn btn-secondary">Clear All Cache</button>
+              <div class="form-help">Remove all cached translations</div>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">API Path (Optional)</label>
-            <input type="text" id="openai-path" class="form-input" placeholder="/v1/chat/completions">
-            <div class="form-help">Leave empty to use default path</div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">API Key</label>
-            <input type="password" id="openai-api-key" class="form-input" placeholder="sk-...">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Model</label>
-            <select id="openai-model" class="form-select">
-              <option value="gpt-5-mini">GPT-5 Mini</option>
-              <option value="gpt-4-turbo-preview">GPT-4 Turbo</option>
-              <option value="gpt-4">GPT-4</option>
-              <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <button id="openai-get-models" class="btn btn-secondary btn-sm">Get Available Models</button>
-          </div>
-          <div class="form-group">
-            <button id="openai-test-connection" class="btn btn-ghost btn-sm">Test Connection</button>
-          </div>
-        </div>
+        </section>
 
-        <div class="card" id="claude-config" style="display: none;">
-          <h3 class="card-title">Claude Configuration</h3>
-          <div class="form-group">
-            <label class="form-label">API Host (Optional)</label>
-            <input type="url" id="claude-host" class="form-input" placeholder="https://api.anthropic.com">
-            <div class="form-help">For custom Claude-compatible APIs</div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">API Path (Optional)</label>
-            <input type="text" id="claude-path" class="form-input" placeholder="/v1/messages">
-            <div class="form-help">Leave empty to use default path</div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">API Key</label>
-            <input type="password" id="claude-api-key" class="form-input" placeholder="sk-ant-...">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Model</label>
-            <select id="claude-model" class="form-select">
-              <option value="claude-haiku-4-5-20251001">Claude 4.5 Haiku</option>
-              <option value="claude-3-opus-20240229">Claude 3 Opus</option>
-              <option value="claude-3-sonnet-20240229">Claude 3 Sonnet</option>
-              <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <button id="claude-get-models" class="btn btn-secondary btn-sm">Get Available Models</button>
-          </div>
-          <div class="form-group">
-            <button id="claude-test-connection" class="btn btn-ghost btn-sm">Test Connection</button>
-          </div>
-        </div>
+        <!-- Telemetry Section -->
+        <section class="section" id="telemetry-section" style="display: none">
+          <h2 class="section-title">Analytics</h2>
 
-        <div class="card">
-          <h3 class="card-title">System Prompt</h3>
-          <div class="form-group">
-            <label class="form-label">Custom Instructions (Optional)</label>
-            <textarea id="system-prompt" class="form-textarea" rows="4" placeholder="You are a professional translator..."></textarea>
-            <div class="form-help">Leave empty to use default prompt</div>
+          <div class="card">
+            <h3 class="card-title">Usage Statistics</h3>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-value" id="total-translations">-</div>
+                <div class="stat-label">Total Translations</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="cache-hits">-</div>
+                <div class="stat-label">Cache Hits</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="api-calls">-</div>
+                <div class="stat-label">API Calls</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="errors">-</div>
+                <div class="stat-label">Errors</div>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
 
-      <!-- Language Section -->
-      <section class="section" id="language-section" style="display: none;">
-        <div class="section-header">
-          <h2 class="section-title">Language Settings</h2>
-          <button id="save-language" class="btn btn-primary">Save Settings</button>
-        </div>
-        
-        <div class="card">
-          <h3 class="card-title">Default Target Language</h3>
-          <div class="form-group">
-            <select id="default-target" class="form-select">
-              <option value="en">English</option>
-              <option value="ja">Japanese</option>
-              <option value="vi">Vietnamese</option>
-              <option value="zh">Chinese</option>
-            </select>
+          <div class="actions">
+            <button id="reset-stats" class="btn btn-secondary">Reset Statistics</button>
           </div>
-        </div>
+        </section>
 
-        <div class="card">
-          <h3 class="card-title">Supported Languages</h3>
-          <div class="info-box">
-            <p>This extension supports the following target languages:</p>
-            <ul class="lang-list">
-              <li>🇬🇧 English (en)</li>
-              <li>🇯🇵 Japanese (ja)</li>
-              <li>🇻🇳 Vietnamese (vi)</li>
-              <li>🇨🇳 Chinese (zh)</li>
+        <!-- About Section -->
+        <section class="section" id="about-section" style="display: none">
+          <div class="section-header">
+            <h2 class="section-title">About</h2>
+            <button id="save-about" class="btn btn-primary">Save Settings</button>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">Smart Translator</h3>
+            <div class="about-content">
+              <p><strong>Version:</strong> 1.0.0</p>
+              <p>
+                <strong>Description:</strong> AI-powered translation extension with multi-provider
+                support
+              </p>
+              <p>
+                <strong>Supported Providers:</strong> OpenAI, Claude (with custom endpoint support)
+              </p>
+              <p><strong>Target Languages:</strong> English, Japanese, Vietnamese, Chinese</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">Developer Settings</h3>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="debug-mode" />
+                <span>Enable Debug Mode</span>
+              </label>
+              <div class="form-help">Show detailed logs in browser console (requires reload)</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">Features</h3>
+            <ul class="feature-list">
+              <li>✨ Select text to translate instantly</li>
+              <li>🔄 Two-layer caching system</li>
+              <li>🌐 Automatic language detection</li>
+              <li>⚡ Floating icon for quick access</li>
+              <li>📝 Mini popup and expand mode</li>
+              <li>📊 Usage analytics</li>
             </ul>
-            <p class="info-note">Source language detection is automatic</p>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
+    </div>
 
-      <!-- Cache Section -->
-      <section class="section" id="cache-section" style="display: none;">
-        <div class="section-header">
-          <h2 class="section-title">Cache Settings</h2>
-          <button id="save-cache" class="btn btn-primary">Save Settings</button>
-        </div>
-        
-        <div class="card">
-          <h3 class="card-title">Memory Cache</h3>
-          <div class="form-group">
-            <label class="form-label">Max Entries</label>
-            <input type="number" id="cache-max-entries" class="form-input" value="500" min="100" max="2000">
-            <div class="form-help">Maximum translations to keep in memory</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3 class="card-title">Persistent Cache</h3>
-          <div class="form-group">
-            <label class="form-label">TTL (Time to Live)</label>
-            <div class="input-group">
-              <input type="number" id="cache-ttl" class="form-input" value="7" min="1" max="90">
-              <span class="input-suffix">days</span>
-            </div>
-            <div class="form-help">How long to store translations</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3 class="card-title">Cache Statistics</h3>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-value" id="cache-memory-count">-</div>
-              <div class="stat-label">Memory Cache</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="cache-persistent-count">-</div>
-              <div class="stat-label">Persistent Cache</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3 class="card-title">Cache Actions</h3>
-          <div class="form-group">
-            <button id="clear-cache" class="btn btn-secondary">Clear All Cache</button>
-            <div class="form-help">Remove all cached translations</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Telemetry Section -->
-      <section class="section" id="telemetry-section" style="display: none;">
-        <h2 class="section-title">Analytics</h2>
-        
-        <div class="card">
-          <h3 class="card-title">Usage Statistics</h3>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-value" id="total-translations">-</div>
-              <div class="stat-label">Total Translations</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="cache-hits">-</div>
-              <div class="stat-label">Cache Hits</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="api-calls">-</div>
-              <div class="stat-label">API Calls</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="errors">-</div>
-              <div class="stat-label">Errors</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="actions">
-          <button id="reset-stats" class="btn btn-secondary">Reset Statistics</button>
-        </div>
-      </section>
-
-      <!-- About Section -->
-      <section class="section" id="about-section" style="display: none;">
-        <h2 class="section-title">About</h2>
-        
-        <div class="card">
-          <h3 class="card-title">Smart Translator</h3>
-          <div class="about-content">
-            <p><strong>Version:</strong> 1.0.0</p>
-            <p><strong>Description:</strong> AI-powered translation extension with multi-provider support</p>
-            <p><strong>Supported Providers:</strong> OpenAI, Claude (with custom endpoint support)</p>
-            <p><strong>Target Languages:</strong> English, Japanese, Vietnamese, Chinese</p>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3 class="card-title">Features</h3>
-          <ul class="feature-list">
-            <li>✨ Select text to translate instantly</li>
-            <li>🔄 Two-layer caching system</li>
-            <li>🌐 Automatic language detection</li>
-            <li>⚡ Floating icon for quick access</li>
-            <li>📝 Mini popup and expand mode</li>
-            <li>📊 Usage analytics</li>
-          </ul>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <script src="options.js" type="module"></script>
-</body>
+    <script src="options.js" type="module"></script>
+  </body>
 </html>

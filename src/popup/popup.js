@@ -3,16 +3,16 @@
  */
 
 // Navigation
-document.querySelectorAll('.nav-item').forEach(item => {
+document.querySelectorAll('.nav-item').forEach((item) => {
   item.addEventListener('click', () => {
     const section = item.dataset.section;
-    
+
     // Update active nav
-    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach((nav) => nav.classList.remove('active'));
     item.classList.add('active');
-    
+
     // Show section
-    document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
+    document.querySelectorAll('.section').forEach((sec) => (sec.style.display = 'none'));
     document.getElementById(`${section}-section`).style.display = 'block';
   });
 });
@@ -21,21 +21,23 @@ document.querySelectorAll('.nav-item').forEach(item => {
 document.getElementById('translate-btn').addEventListener('click', async () => {
   const text = document.getElementById('input-text').value.trim();
   const toLang = document.getElementById('to-lang').value;
-  
-  if (!text) return;
-  
+
+  if (!text) {
+    return;
+  }
+
   const outputArea = document.getElementById('output-area');
   const outputText = document.getElementById('output-text');
-  
+
   outputArea.style.display = 'block';
   outputText.textContent = 'Translating...';
-  
+
   try {
     const response = await chrome.runtime.sendMessage({
       type: 'translate',
-      payload: { text, from: 'auto', to: toLang }
+      payload: { text, from: 'auto', to: toLang },
     });
-    
+
     if (response.success) {
       outputText.textContent = response.data;
     } else {
@@ -88,7 +90,7 @@ async function loadSettings() {
     const response = await chrome.runtime.sendMessage({ type: 'getSettings' });
     if (response.success) {
       const config = response.data;
-      document.getElementById('current-provider').textContent = 
+      document.getElementById('current-provider').textContent =
         config.provider.charAt(0).toUpperCase() + config.provider.slice(1);
     }
   } catch (err) {

@@ -14,14 +14,15 @@ const MAX_ENTRIES = 100;
 export async function getStats() {
   try {
     const { telemetry = [] } = await getStorage(TELEMETRY_KEY);
-    
+
     const totalRequests = telemetry.length;
-    const cacheHits = telemetry.filter(e => e.cacheHit).length;
-    const successfulRequests = telemetry.filter(e => e.success).length;
-    
-    const avgLatency = telemetry.length > 0
-      ? telemetry.reduce((sum, e) => sum + (e.duration || 0), 0) / telemetry.length
-      : 0;
+    const cacheHits = telemetry.filter((e) => e.cacheHit).length;
+    const successfulRequests = telemetry.filter((e) => e.success).length;
+
+    const avgLatency =
+      telemetry.length > 0
+        ? telemetry.reduce((sum, e) => sum + (e.duration || 0), 0) / telemetry.length
+        : 0;
 
     const providerCounts = telemetry.reduce((acc, e) => {
       acc[e.provider] = (acc[e.provider] || 0) + 1;
@@ -31,11 +32,11 @@ export async function getStats() {
     return {
       totalRequests,
       cacheHits,
-      cacheHitRate: totalRequests > 0 ? (cacheHits / totalRequests * 100).toFixed(1) : 0,
-      successRate: totalRequests > 0 ? (successfulRequests / totalRequests * 100).toFixed(1) : 0,
+      cacheHitRate: totalRequests > 0 ? ((cacheHits / totalRequests) * 100).toFixed(1) : 0,
+      successRate: totalRequests > 0 ? ((successfulRequests / totalRequests) * 100).toFixed(1) : 0,
       avgLatency: Math.round(avgLatency),
       providerCounts,
-      lastProvider: telemetry[telemetry.length - 1]?.provider || 'none'
+      lastProvider: telemetry[telemetry.length - 1]?.provider || 'none',
     };
   } catch (err) {
     console.error('Get telemetry stats error:', err);
@@ -46,7 +47,7 @@ export async function getStats() {
       successRate: 0,
       avgLatency: 0,
       providerCounts: {},
-      lastProvider: 'none'
+      lastProvider: 'none',
     };
   }
 }

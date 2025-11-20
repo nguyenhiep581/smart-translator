@@ -54,6 +54,8 @@ export function hideFloatingIcon() {
 function handleIconHover() {
   if (currentSelection) {
     showMiniPopup(currentSelection);
+    // Hide icon after showing popup to prevent re-hover
+    hideFloatingIcon();
   }
 }
 
@@ -64,5 +66,7 @@ function handleIconClick(event) {
   event.stopPropagation();
   if (currentSelection) {
     showMiniPopup(currentSelection);
+    // Hide icon after showing popup
+    hideFloatingIcon();
   }
 }

@@ -2,6 +2,8 @@
  * Expand Mode Panel - Full Translation Editor
  */
 
+import { debug } from '../utils/logger.js';
+
 export class ExpandPanel {
   constructor() {
     this.panel = null;
@@ -24,7 +26,7 @@ export class ExpandPanel {
 
     this.updateContent();
     this.show();
-    
+
     // Focus on target textarea if no translation yet
     if (!translatedText) {
       this.panel.querySelector('#expand-target').focus();
@@ -165,7 +167,7 @@ export class ExpandPanel {
       } catch (err) {
         // Silently fail if storage update fails
       }
-      
+
       // Auto-translate with new language
       await this.translate();
     });
@@ -198,12 +200,12 @@ export class ExpandPanel {
   updateContent() {
     const sourceTextarea = this.panel.querySelector('#expand-source');
     const targetTextarea = this.panel.querySelector('#expand-target');
-    
+
     sourceTextarea.value = this.sourceText;
     targetTextarea.value = this.translatedText;
 
     // Update source info
-    const wordCount = this.sourceText.split(/\s+/).filter(w => w).length;
+    const wordCount = this.sourceText.split(/\s+/).filter((w) => w).length;
     const charCount = this.sourceText.length;
     this.panel.querySelector('#source-info').textContent = `${wordCount} words, ${charCount} chars`;
   }
@@ -229,19 +231,27 @@ export class ExpandPanel {
     translateBtn.disabled = true;
     targetTextarea.value = '';
 
+    const startTime = performance.now();
+
     try {
       const response = await chrome.runtime.sendMessage({
         type: 'translate',
         payload: {
           text: this.sourceText,
           from: 'auto',
-          to: targetLang
-        }
+          to: targetLang,
+        },
       });
+
+      const endTime = performance.now();
+      const duration = Math.round(endTime - startTime);
+      debug(
+        `Expand translation took ${duration}ms ${response.fromCache ? '(cached)' : '(API call)'}`,
+      );
 
       if (response.success) {
         this.translatedText = response.data;
-        
+
         // Typewriter effect
         await this.typewriterEffect(targetTextarea, this.translatedText);
       } else {
@@ -265,14 +275,15 @@ export class ExpandPanel {
    */
   async typewriterEffect(textarea, text, speed = 15) {
     textarea.value = '';
-    
+
     for (let i = 0; i < text.length; i++) {
       textarea.value += text[i];
-      if (i % 3 === 0) { // Update every 3 characters
-        await new Promise(resolve => setTimeout(resolve, speed));
+      if (i % 3 === 0) {
+        // Update every 3 characters
+        await new Promise((resolve) => setTimeout(resolve, speed));
       }
     }
-    
+
     // Ensure full text is shown
     textarea.value = text;
   }
@@ -282,12 +293,14 @@ export class ExpandPanel {
    */
   replaceOriginal() {
     const translatedText = this.panel.querySelector('#expand-target').value;
-    if (!translatedText) return;
+    if (!translatedText) {
+      return;
+    }
 
     // Send message to content script to replace text
     chrome.runtime.sendMessage({
       type: 'replaceText',
-      payload: { text: translatedText }
+      payload: { text: translatedText },
     });
 
     this.showNotification('Text replaced');

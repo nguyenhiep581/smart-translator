@@ -21,7 +21,7 @@ export class MemoryCache {
 
     // Update access order (move to end = most recently used)
     this.updateAccessOrder(key);
-    
+
     return this.cache.get(key);
   }
 

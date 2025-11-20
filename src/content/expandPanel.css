@@ -7,10 +7,12 @@
   width: 100%;
   height: 100%;
   z-index: 2147483647;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 200ms ease, visibility 200ms ease;
+  transition:
+    opacity 200ms ease,
+    visibility 200ms ease;
 }
 
 #st-expand-panel.st-expand-open {
@@ -47,17 +49,17 @@
 /* Header */
 .st-expand-header {
   padding: 20px 24px;
-  border-bottom: 1px solid #E5E9F0;
+  border-bottom: 1px solid #e5e9f0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #F7F9FC;
+  background: #f7f9fc;
 }
 
 .st-expand-title {
   font-size: 18px;
   font-weight: 600;
-  color: #1A2332;
+  color: #1a2332;
   margin: 0;
 }
 
@@ -72,7 +74,7 @@
   border-radius: 8px;
   border: none;
   background: white;
-  color: #4F5B6C;
+  color: #4f5b6c;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -81,13 +83,13 @@
 }
 
 .st-expand-btn:hover {
-  background: #EDF1F7;
-  color: #1A2332;
+  background: #edf1f7;
+  color: #1a2332;
 }
 
 .st-btn-close:hover {
-  background: #FEE2E2;
-  color: #EF4444;
+  background: #fee2e2;
+  color: #ef4444;
 }
 
 /* Content */
@@ -106,33 +108,35 @@
 
 .st-pane-header {
   padding: 16px 24px;
-  border-bottom: 1px solid #E5E9F0;
+  border-bottom: 1px solid #e5e9f0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #FAFBFC;
+  background: #fafbfc;
+  min-height: 56px;
 }
 
 .st-pane-header-left {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1;
 }
 
 .st-pane-label {
   font-size: 14px;
   font-weight: 600;
-  color: #1A2332;
+  color: #1a2332;
 }
 
 .st-pane-info {
   font-size: 12px;
-  color: #8896A8;
+  color: #8896a8;
 }
 
 .st-lang-select {
   padding: 6px 12px;
-  border: 1px solid #D1D8E0;
+  border: 1px solid #d1d8e0;
   border-radius: 6px;
   font-size: 13px;
   background: white;
@@ -151,29 +155,29 @@
   border: none;
   font-size: 15px;
   line-height: 1.7;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   resize: none;
   outline: none;
   background: white;
 }
 
 .st-expand-textarea::placeholder {
-  color: #C1CAD4;
+  color: #c1cad4;
 }
 
 .st-expand-divider {
   width: 1px;
-  background: linear-gradient(to bottom, transparent, #E5E9F0 20%, #E5E9F0 80%, transparent);
+  background: linear-gradient(to bottom, transparent, #e5e9f0 20%, #e5e9f0 80%, transparent);
 }
 
 /* Footer */
 .st-expand-footer {
   padding: 16px 24px;
-  border-top: 1px solid #E5E9F0;
+  border-top: 1px solid #e5e9f0;
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  background: #F7F9FC;
+  background: #f7f9fc;
 }
 
 .st-btn {
@@ -184,32 +188,32 @@
   border: none;
   cursor: pointer;
   transition: all 150ms;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .st-btn-primary {
-  background: #4A90E2;
+  background: #4a90e2;
   color: white;
 }
 
 .st-btn-primary:hover {
-  background: #357ABD;
+  background: #357abd;
 }
 
 .st-btn-primary:disabled {
-  background: #A8C5E4;
+  background: #a8c5e4;
   cursor: not-allowed;
 }
 
 .st-btn-secondary {
   background: white;
-  color: #4F5B6C;
-  border: 1px solid #D1D8E0;
+  color: #4f5b6c;
+  border: 1px solid #d1d8e0;
 }
 
 .st-btn-secondary:hover {
-  background: #F7F9FC;
-  color: #1A2332;
+  background: #f7f9fc;
+  color: #1a2332;
 }
 
 /* Notification */
@@ -218,7 +222,7 @@
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  background: #1A2332;
+  background: #1a2332;
   color: white;
   padding: 12px 24px;
   border-radius: 8px;
@@ -263,7 +267,7 @@
   .st-expand-divider {
     width: 100%;
     height: 1px;
-    background: linear-gradient(to right, transparent, #E5E9F0 20%, #E5E9F0 80%, transparent);
+    background: linear-gradient(to right, transparent, #e5e9f0 20%, #e5e9f0 80%, transparent);
   }
 
   .st-expand-textarea {

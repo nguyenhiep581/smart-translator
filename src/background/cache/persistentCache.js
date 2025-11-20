@@ -20,13 +20,13 @@ export class PersistentCache {
     try {
       const storageKey = `${CACHE_KEY_PREFIX}${key}`;
       const result = await getStorage(storageKey);
-      
+
       if (!result[storageKey]) {
         return null;
       }
 
       const entry = result[storageKey];
-      
+
       // Check if expired
       if (this.isExpired(entry)) {
         await this.delete(key);
@@ -52,7 +52,7 @@ export class PersistentCache {
       const entry = {
         value,
         timestamp: Date.now(),
-        ttl
+        ttl,
       };
 
       await setStorage({ [storageKey]: entry });
@@ -92,10 +92,8 @@ export class PersistentCache {
   async clear() {
     try {
       const all = await chrome.storage.local.get(null);
-      const cacheKeys = Object.keys(all).filter(key => 
-        key.startsWith(CACHE_KEY_PREFIX)
-      );
-      
+      const cacheKeys = Object.keys(all).filter((key) => key.startsWith(CACHE_KEY_PREFIX));
+
       if (cacheKeys.length > 0) {
         await chrome.storage.local.remove(cacheKeys);
       }
@@ -111,13 +109,11 @@ export class PersistentCache {
   async getStats() {
     try {
       const all = await chrome.storage.local.get(null);
-      const cacheEntries = Object.keys(all).filter(key => 
-        key.startsWith(CACHE_KEY_PREFIX)
-      );
-      
+      const cacheEntries = Object.keys(all).filter((key) => key.startsWith(CACHE_KEY_PREFIX));
+
       return {
         count: cacheEntries.length,
-        size: await chrome.storage.local.getBytesInUse(cacheEntries)
+        size: await chrome.storage.local.getBytesInUse(cacheEntries),
       };
     } catch (err) {
       console.error('Persistent cache stats error:', err);

@@ -1,5 +1,36 @@
 /**
- * Cache Service - Combines memory and persistent cache
+ * Two-Layer Cache Service
+ *
+ * Implements a high-performance caching system with:
+ * - Memory cache (LRU) for instant access (max 500 entries by default)
+ * - Persistent cache (chrome.storage.local) for durability across sessions
+ * - Automatic key generation using hash functions
+ * - TTL (Time To Live) support for cache expiration
+ *
+ * Cache Hit Flow:
+ * 1. Check memory cache first (fastest)
+ * 2. If miss, check persistent cache
+ * 3. If found in persistent, populate memory cache
+ * 4. Return value or null
+ *
+ * @class CacheService
+ *
+ * @example
+ * const cache = new CacheService(500); // Max 500 entries in memory
+ *
+ * // Generate cache key
+ * const key = await cache.generateKey('openai', 'gpt-4', 'en', 'vi', 'Hello');
+ *
+ * // Store translation
+ * await cache.set(key, 'Xin chào', 86400000); // 24h TTL
+ *
+ * // Retrieve translation
+ * const translation = await cache.get(key); // Returns from memory or persistent
+ *
+ * // Get cache statistics
+ * const stats = await cache.getStats();
+ * console.log(`Memory: ${stats.memory.size}/${stats.memory.maxSize}`);
+ * console.log(`Persistent: ${stats.persistent.size} entries`);
  */
 
 import { MemoryCache } from './memoryCache.js';
@@ -7,6 +38,11 @@ import { PersistentCache } from './persistentCache.js';
 import { generateCacheKey } from '../../utils/hashing.js';
 
 export class CacheService {
+  /**
+   * Create a cache service instance
+   *
+   * @param {number} maxMemorySize - Maximum entries in memory cache (default: 500)
+   */
   constructor(maxMemorySize = 500) {
     this.memoryCache = new MemoryCache(maxMemorySize);
     this.persistentCache = new PersistentCache();
@@ -73,13 +109,13 @@ export class CacheService {
    */
   async getStats() {
     const persistentStats = await this.persistentCache.getStats();
-    
+
     return {
       memory: {
         size: this.memoryCache.size(),
-        maxSize: this.memoryCache.maxSize
+        maxSize: this.memoryCache.maxSize,
       },
-      persistent: persistentStats
+      persistent: persistentStats,
     };
   }
 }

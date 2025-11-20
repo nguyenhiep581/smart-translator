@@ -5,6 +5,7 @@
 import { createElement, escapeHtml, positionNearRect } from '../utils/dom.js';
 import { LANGUAGES } from '../config/defaults.js';
 import { ExpandPanel } from './popupExpand.js';
+import { debug } from '../utils/logger.js';
 
 let miniPopup = null;
 let currentTranslation = null;
@@ -38,9 +39,14 @@ export async function showMiniPopup(selection) {
       <span class="st-arrow">→</span>
       <select class="st-to-lang">
         ${Object.entries(LANGUAGES)
-          .filter(([code]) => code !== 'auto')
-          .map(([code, lang]) => `<option value="${code}" ${code === defaultToLang ? 'selected' : ''}>${lang.name}</option>`)
-          .join('')}
+    .filter(([code]) => code !== 'auto')
+    .map(
+      ([code, lang]) =>
+        `<option value="${code}" ${
+          code === defaultToLang ? 'selected' : ''
+        }>${lang.name}</option>`,
+    )
+    .join('')}
       </select>
     </div>
     <div class="st-original">${escapeHtml(selection.text)}</div>
@@ -60,7 +66,7 @@ export async function showMiniPopup(selection) {
   // Add event listeners
   miniPopup.querySelector('.st-to-lang').addEventListener('change', async (e) => {
     const newLang = e.target.value;
-    
+
     // Save to settings
     try {
       const result = await chrome.storage.local.get('config');
@@ -70,7 +76,7 @@ export async function showMiniPopup(selection) {
     } catch (err) {
       // Silently fail if storage update fails
     }
-    
+
     translateText(selection);
   });
 
@@ -113,8 +119,18 @@ export function hideMiniPopup() {
 async function translateText(selection) {
   const toLang = miniPopup.querySelector('.st-to-lang').value;
   const translationEl = miniPopup.querySelector('.st-translation');
-  
-  translationEl.innerHTML = '<div class="st-loading">Translating...</div>';
+
+  // Warn for long text
+  const textLength = selection.text.length;
+  let loadingMsg = 'Translating...';
+  if (textLength > 500) {
+    const estimatedSeconds = Math.ceil(textLength / 20); // Rough estimate
+    loadingMsg = `Translating long text (~${estimatedSeconds}s)...`;
+  }
+
+  translationEl.innerHTML = `<div class="st-loading">${loadingMsg}</div>`;
+
+  const startTime = performance.now();
 
   try {
     const response = await chrome.runtime.sendMessage({
@@ -122,34 +138,51 @@ async function translateText(selection) {
       payload: {
         text: selection.text,
         from: 'auto',
-        to: toLang
-      }
+        to: toLang,
+      },
     });
+
+    const endTime = performance.now();
+    const duration = Math.round(endTime - startTime);
+    debug(`Translation took ${duration}ms ${response.fromCache ? '(cached)' : '(API call)'}`);
 
     if (response.success) {
       currentTranslation = response.data;
-      
+
       // Show with typewriter effect
       translationEl.innerHTML = '<div class="st-translation-text"></div>';
       const textEl = translationEl.querySelector('.st-translation-text');
-      
+
       await typewriterEffect(textEl, response.data);
-      
+
       if (response.fromCache) {
         translationEl.innerHTML += '<div class="st-cache-indicator">⚡ From cache</div>';
       }
 
       // Enable buttons
-      miniPopup.querySelectorAll('.st-btn').forEach(btn => btn.disabled = false);
+      miniPopup.querySelectorAll('.st-btn').forEach((btn) => (btn.disabled = false));
     } else {
-      translationEl.innerHTML = `<div class="st-error">${escapeHtml(response.error)}</div>`;
+      const errorMsg = response.error || 'Translation failed';
+      translationEl.innerHTML = `<div class="st-error">${escapeHtml(errorMsg)}</div>`;
+
+      // Show helpful message for timeout errors
+      if (errorMsg.includes('timeout')) {
+        translationEl.innerHTML +=
+          '<div class="st-help">💡 Try selecting shorter text or check your API endpoint speed</div>';
+      }
     }
   } catch (err) {
     // Handle extension context invalidated error
     if (err.message.includes('Extension context invalidated')) {
-      translationEl.innerHTML = '<div class="st-error">Extension was reloaded. Please refresh this page.</div>';
+      translationEl.innerHTML =
+        '<div class="st-error">Extension was reloaded. Please refresh this page.</div>';
+    } else if (err.message.includes('timeout')) {
+      translationEl.innerHTML =
+        '<div class="st-error">Translation timeout - API is too slow</div><div class="st-help">💡 Try shorter text or check API endpoint</div>';
     } else {
-      translationEl.innerHTML = `<div class="st-error">Translation failed: ${escapeHtml(err.message)}</div>`;
+      translationEl.innerHTML = `<div class="st-error">Translation failed: ${escapeHtml(
+        err.message,
+      )}</div>`;
     }
   }
 }
@@ -160,14 +193,15 @@ async function translateText(selection) {
 async function typewriterEffect(element, text, speed = 20) {
   element.textContent = '';
   element.classList.add('fade-in');
-  
+
   for (let i = 0; i < text.length; i++) {
     element.textContent += text[i];
-    if (i % 3 === 0) { // Update every 3 characters for better performance
-      await new Promise(resolve => setTimeout(resolve, speed));
+    if (i % 3 === 0) {
+      // Update every 3 characters for better performance
+      await new Promise((resolve) => setTimeout(resolve, speed));
     }
   }
-  
+
   // Ensure full text is shown
   element.textContent = text;
 }
@@ -176,11 +210,13 @@ async function typewriterEffect(element, text, speed = 20) {
  * Copy translation to clipboard
  */
 async function copyTranslation() {
-  if (!currentTranslation) return;
+  if (!currentTranslation) {
+    return;
+  }
 
   try {
     await navigator.clipboard.writeText(currentTranslation);
-    
+
     // Show feedback
     const btn = miniPopup.querySelector('.st-btn-copy');
     const originalText = btn.textContent;
@@ -197,7 +233,9 @@ async function copyTranslation() {
  * Replace selected text with translation
  */
 function replaceSelection(selection) {
-  if (!currentTranslation || !selection.range) return;
+  if (!currentTranslation || !selection.range) {
+    return;
+  }
 
   try {
     selection.range.deleteContents();
@@ -215,7 +253,7 @@ function openExpandMode(selection) {
   if (!expandPanel) {
     expandPanel = new ExpandPanel();
   }
-  
+
   expandPanel.open(selection.text, currentTranslation || '');
   hideMiniPopup();
 }

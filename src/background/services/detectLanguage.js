@@ -9,19 +9,19 @@ import { franc } from 'franc-min';
  * Map franc language codes to ISO 639-1
  */
 const FRANC_TO_ISO = {
-  'eng': 'en',
-  'jpn': 'ja',
-  'vie': 'vi',
-  'cmn': 'zh', // Mandarin Chinese
-  'fra': 'fr',
-  'deu': 'de',
-  'spa': 'es',
-  'ita': 'it',
-  'por': 'pt',
-  'rus': 'ru',
-  'kor': 'ko',
-  'ara': 'ar',
-  'tha': 'th'
+  eng: 'en',
+  jpn: 'ja',
+  vie: 'vi',
+  cmn: 'zh', // Mandarin Chinese
+  fra: 'fr',
+  deu: 'de',
+  spa: 'es',
+  ita: 'it',
+  por: 'pt',
+  rus: 'ru',
+  kor: 'ko',
+  ara: 'ar',
+  tha: 'th',
 };
 
 /**
@@ -52,7 +52,7 @@ export async function detectLanguage(text, config = {}) {
 function detectOffline(text) {
   try {
     const detected = franc(text, { minLength: 3 });
-    
+
     if (detected === 'und') {
       return 'auto'; // Undefined/unknown
     }
@@ -74,12 +74,12 @@ function detectOffline(text) {
 async function detectWithAPI(text, config) {
   // Use a quick API call to detect language
   // This can use the configured provider (OpenAI/Claude)
-  
+
   try {
     if (config.provider === 'openai' && config.openai?.apiKey) {
       return await detectWithOpenAI(text, config.openai);
     }
-    
+
     // Fallback to offline
     return detectOffline(text);
   } catch (err) {
@@ -99,23 +99,24 @@ async function detectWithOpenAI(text, config) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`
+      Authorization: `Bearer ${config.apiKey}`,
     },
     body: JSON.stringify({
       model: 'gpt-3.5-turbo',
       messages: [
         {
           role: 'system',
-          content: 'Detect the language of the following text and respond with only the ISO 639-1 language code (e.g., "en", "vi", "ja", "zh").'
+          content:
+            'Detect the language of the following text and respond with only the ISO 639-1 language code (e.g., "en", "vi", "ja", "zh").',
         },
         {
           role: 'user',
-          content: text.slice(0, 200) // First 200 chars
-        }
+          content: text.slice(0, 200), // First 200 chars
+        },
       ],
       temperature: 0,
-      max_tokens: 10
-    })
+      max_tokens: 10,
+    }),
   });
 
   if (!response.ok) {
@@ -124,7 +125,7 @@ async function detectWithOpenAI(text, config) {
 
   const data = await response.json();
   const langCode = data.choices[0]?.message?.content?.trim().toLowerCase();
-  
+
   // Validate it's a 2-letter code
   if (langCode && langCode.length === 2) {
     return langCode;

@@ -1,11 +1,48 @@
 /**
- * Chrome Storage utility functions
+ * Chrome Storage Utility Functions
+ *
+ * Provides Promise-based wrappers around Chrome's storage API with:
+ * - Automatic error handling
+ * - Type-safe storage operations
+ * - Settings management with defaults
+ * - Storage usage tracking
+ *
+ * All functions return Promises for async/await compatibility.
+ *
+ * @module storage
+ *
+ * @example
+ * import { getStorage, setStorage } from './utils/storage.js';
+ *
+ * // Save settings
+ * await setStorage({ config: { provider: 'openai', apiKey: 'sk-...' } });
+ *
+ * // Load settings
+ * const { config } = await getStorage('config');
+ * console.log(config.provider); // 'openai'
  */
 
 /**
- * Get item from chrome.storage.local
- * @param {string|string[]|object} keys - Key(s) to retrieve
- * @returns {Promise<any>}
+ * Get item(s) from chrome.storage.local
+ *
+ * @param {string|string[]|Object} keys - Key(s) to retrieve. Can be:
+ *   - Single key: 'config'
+ *   - Multiple keys: ['config', 'cache']
+ *   - Object with defaults: { config: defaultConfig }
+ *
+ * @returns {Promise<Object>} Object with requested keys and values
+ *
+ * @throws {Error} If Chrome storage API fails
+ *
+ * @example
+ * // Get single key
+ * const { config } = await getStorage('config');
+ *
+ * // Get multiple keys
+ * const { config, cache } = await getStorage(['config', 'cache']);
+ *
+ * // Get with defaults
+ * const result = await getStorage({ config: DEFAULT_CONFIG });
  */
 export async function getStorage(keys) {
   return new Promise((resolve, reject) => {

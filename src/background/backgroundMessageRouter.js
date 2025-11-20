@@ -2,7 +2,7 @@
  * Message router for background service worker
  */
 
-import { debug, error } from '../utils/logger.js';
+import { debug, error, initLogger } from '../utils/logger.js';
 import { getStorage, setStorage } from '../utils/storage.js';
 import { OpenAITranslator } from './translator/openAITranslator.js';
 import { ClaudeTranslator } from './translator/claudeTranslator.js';
@@ -23,23 +23,27 @@ export async function handleMessage(message, sender, sendResponse) {
       case 'translate':
         await handleTranslate(message.payload, sendResponse);
         break;
-        
+
       case 'detectLanguage':
         await handleDetectLanguage(message.payload, sendResponse);
         break;
-        
+
       case 'getSettings':
         await handleGetSettings(sendResponse);
         break;
-        
+
       case 'setSettings':
         await handleSetSettings(message.payload, sendResponse);
         break;
-        
+
       case 'clearCache':
         await handleClearCache(sendResponse);
         break;
-        
+
+      case 'updateDebugMode':
+        await handleUpdateDebugMode(message.payload, sendResponse);
+        break;
+
       default:
         sendResponse({ success: false, error: 'Unknown message type' });
     }
@@ -54,55 +58,57 @@ export async function handleMessage(message, sender, sendResponse) {
  */
 async function handleTranslate(payload, sendResponse) {
   const { text, from, to } = payload;
-  
+
   if (!text) {
     sendResponse({ success: false, error: 'No text provided' });
     return;
   }
-  
+
   try {
     // Get configuration
     const { config } = await getStorage('config');
     const translator = createTranslator(config);
-    
+
     // Check cache first
     const cacheKey = await cacheService.generateKey(
       config.provider,
       translator.getModel(),
       from,
       to,
-      text
+      text,
     );
-    
+
     const cached = await cacheService.get(cacheKey);
     if (cached) {
+      debug('Cache hit - instant response');
       sendResponse({ success: true, data: cached, fromCache: true });
       return;
     }
-    
+
     // Translate
     const startTime = Date.now();
     const translation = await translator.translate(text, from, to);
     const duration = Date.now() - startTime;
-    
+
+    debug(`API call to ${config.provider} took ${duration}ms`);
+
     // Cache the result
     await cacheService.set(cacheKey, translation);
-    
+
     // Track telemetry
     await trackTelemetry({
       provider: config.provider,
       duration,
       cacheHit: false,
-      success: true
+      success: true,
     });
-    
-    sendResponse({ 
-      success: true, 
-      data: translation, 
+
+    sendResponse({
+      success: true,
+      data: translation,
       fromCache: false,
-      duration 
+      duration,
     });
-    
   } catch (err) {
     error('Translation error:', err);
     await trackTelemetry({
@@ -110,7 +116,7 @@ async function handleTranslate(payload, sendResponse) {
       duration: 0,
       cacheHit: false,
       success: false,
-      error: err.message
+      error: err.message,
     });
     sendResponse({ success: false, error: err.message });
   }
@@ -121,7 +127,7 @@ async function handleTranslate(payload, sendResponse) {
  */
 async function handleDetectLanguage(payload, sendResponse) {
   const { text } = payload;
-  
+
   try {
     const { config } = await getStorage('config');
     const lang = await detectLanguage(text, config);
@@ -173,6 +179,21 @@ async function handleClearCache(sendResponse) {
 }
 
 /**
+ * Handle update debug mode request
+ */
+async function handleUpdateDebugMode(payload, sendResponse) {
+  try {
+    const { debugMode } = payload;
+    initLogger(debugMode);
+    debug('Debug mode updated to:', debugMode);
+    sendResponse({ success: true });
+  } catch (err) {
+    error('Update debug mode error:', err);
+    sendResponse({ success: false, error: err.message });
+  }
+}
+
+/**
  * Create translator instance based on config
  */
 function createTranslator(config) {
@@ -193,13 +214,13 @@ async function trackTelemetry(data) {
   const { telemetry = [] } = await getStorage('telemetry');
   telemetry.push({
     ...data,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
-  
+
   // Keep only last 100 entries
   if (telemetry.length > 100) {
     telemetry.splice(0, telemetry.length - 100);
   }
-  
+
   await setStorage({ telemetry });
 }
