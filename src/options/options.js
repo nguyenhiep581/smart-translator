@@ -4,6 +4,24 @@
 
 import { loadSettings, saveSettings } from '../utils/storage.js';
 import { error as logError } from '../utils/logger.js';
+import { getTargetLanguages } from '../config/defaults.js';
+
+// Populate language dropdown
+function populateLanguageSelect() {
+  const languages = getTargetLanguages();
+  const optionsHTML = languages
+    .map(({ code, name }) => `<option value="${code}">${name}</option>`)
+    .join('');
+
+  document.getElementById('default-target').innerHTML = optionsHTML;
+
+  // Populate supported languages list
+  const langListHTML = languages
+    .map(({ code, name, flag }) => `<li>${flag} ${name} (${code})</li>`)
+    .join('');
+
+  document.getElementById('supported-languages').innerHTML = langListHTML;
+}
 
 // Navigation
 document.querySelectorAll('.nav-item').forEach((item) => {
@@ -492,6 +510,7 @@ if (!document.getElementById('notification-styles')) {
 }
 
 // Initialize
+populateLanguageSelect();
 loadSettingsUI();
 loadCacheStats();
 loadTelemetry();

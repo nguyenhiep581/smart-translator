@@ -3,7 +3,7 @@
  */
 
 import { createElement, escapeHtml, positionNearRect } from '../utils/dom.js';
-import { LANGUAGES } from '../config/defaults.js';
+import { LANGUAGES, generateLanguageOptions } from '../config/defaults.js';
 import { ExpandPanel } from './popupExpand.js';
 import { debug, error as logError } from '../utils/logger.js';
 
@@ -54,15 +54,7 @@ export async function showMiniPopup(selection) {
       </select>
       <span class="st-arrow">→</span>
       <select class="st-to-lang">
-        ${Object.entries(LANGUAGES)
-    .filter(([code]) => code !== 'auto')
-    .map(
-      ([code, lang]) =>
-        `<option value="${code}" ${
-          code === defaultToLang ? 'selected' : ''
-        }>${lang.name}</option>`,
-    )
-    .join('')}
+        ${generateLanguageOptions(defaultToLang)}
       </select>
     </div>
     <div class="st-original">${escapeHtml(selection.text)}</div>

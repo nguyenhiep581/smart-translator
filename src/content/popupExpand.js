@@ -3,6 +3,7 @@
  */
 
 import { debug, error as logError } from '../utils/logger.js';
+import { generateLanguageOptions } from '../config/defaults.js';
 
 export class ExpandPanel {
   constructor() {
@@ -104,10 +105,7 @@ export class ExpandPanel {
                 <span class="st-pane-label">Translation</span>
               </div>
               <select id="expand-target-lang" class="st-lang-select">
-                <option value="en" ${defaultToLang === 'en' ? 'selected' : ''}>English</option>
-                <option value="ja" ${defaultToLang === 'ja' ? 'selected' : ''}>Japanese</option>
-                <option value="vi" ${defaultToLang === 'vi' ? 'selected' : ''}>Vietnamese</option>
-                <option value="zh" ${defaultToLang === 'zh' ? 'selected' : ''}>Chinese</option>
+                ${generateLanguageOptions(defaultToLang)}
               </select>
             </div>
             <div class="st-pane-body">

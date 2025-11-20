@@ -210,10 +210,7 @@
             <h3 class="card-title">Default Target Language</h3>
             <div class="form-group">
               <select id="default-target" class="form-select">
-                <option value="en">English</option>
-                <option value="ja">Japanese</option>
-                <option value="vi">Vietnamese</option>
-                <option value="zh">Chinese</option>
+                <!-- Options will be populated by JavaScript -->
               </select>
             </div>
           </div>
@@ -235,11 +232,8 @@
             <h3 class="card-title">Supported Languages</h3>
             <div class="info-box">
               <p>This extension supports the following target languages:</p>
-              <ul class="lang-list">
-                <li>🇬🇧 English (en)</li>
-                <li>🇯🇵 Japanese (ja)</li>
-                <li>🇻🇳 Vietnamese (vi)</li>
-                <li>🇨🇳 Chinese (zh)</li>
+              <ul class="lang-list" id="supported-languages">
+                <!-- Languages will be populated by JavaScript -->
               </ul>
               <p class="info-note">Source language detection is automatic</p>
             </div>

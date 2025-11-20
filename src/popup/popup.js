@@ -3,6 +3,18 @@
  */
 
 import { error as logError } from '../utils/logger.js';
+import { getTargetLanguages } from '../config/defaults.js';
+
+// Populate language dropdowns
+function populateLanguageSelects() {
+  const languages = getTargetLanguages();
+  const optionsHTML = languages
+    .map(({ code, name }) => `<option value="${code}">${name}</option>`)
+    .join('');
+
+  document.getElementById('to-lang').innerHTML = optionsHTML;
+  document.getElementById('default-lang').innerHTML = optionsHTML;
+}
 
 // Navigation
 document.querySelectorAll('.nav-item').forEach((item) => {
@@ -86,15 +98,55 @@ document.getElementById('clear-cache').addEventListener('click', async () => {
   }
 });
 
+// Handle default language change
+document.getElementById('default-lang').addEventListener('change', async (e) => {
+  const newLang = e.target.value;
+  try {
+    const result = await chrome.storage.local.get('config');
+    const config = result.config || {};
+    config.defaultTargetLang = newLang;
+    await chrome.storage.local.set({ config });
+
+    // Update quick translate dropdown
+    document.getElementById('to-lang').value = newLang;
+  } catch (err) {
+    logError('Failed to save default language:', err);
+  }
+});
+
+// Handle Ctrl shortcut toggle
+document.getElementById('ctrl-shortcut').addEventListener('change', async (e) => {
+  const enabled = e.target.checked;
+  try {
+    const result = await chrome.storage.local.get('config');
+    const config = result.config || {};
+    config.enableCtrlShortcut = enabled;
+    await chrome.storage.local.set({ config });
+  } catch (err) {
+    logError('Failed to save Ctrl shortcut setting:', err);
+  }
+});
+
 // Load settings
 async function loadSettings() {
   try {
-    const response = await chrome.runtime.sendMessage({ type: 'getSettings' });
-    if (response.success) {
-      const config = response.data;
+    const result = await chrome.storage.local.get('config');
+    const config = result.config || {};
+
+    // Load provider
+    if (config.provider) {
       document.getElementById('current-provider').textContent =
         config.provider.charAt(0).toUpperCase() + config.provider.slice(1);
     }
+
+    // Load default target language
+    const defaultLang = config.defaultTargetLang || 'vi';
+    document.getElementById('default-lang').value = defaultLang;
+    document.getElementById('to-lang').value = defaultLang;
+
+    // Load Ctrl shortcut setting
+    const ctrlShortcut = config.enableCtrlShortcut !== false; // Default true
+    document.getElementById('ctrl-shortcut').checked = ctrlShortcut;
   } catch (err) {
     logError('Load settings failed:', err);
   }
@@ -111,5 +163,6 @@ async function loadCacheStatus() {
 }
 
 // Initialize
+populateLanguageSelects();
 loadSettings();
 loadCacheStatus();
