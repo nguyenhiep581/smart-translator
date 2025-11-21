@@ -9,10 +9,10 @@ import { error as logError } from '../utils/logger.js';
 async function loadLanguagePreferences() {
   try {
     const result = await chrome.storage.local.get('sidePanelLanguages');
-    return result.sidePanelLanguages || ['vi', 'ja', 'en', 'zh']; // Default
+    return result.sidePanelLanguages || ['vi', 'en']; // Default: Vietnamese and English
   } catch (err) {
     logError('Failed to load language preferences:', err);
-    return ['vi', 'ja', 'en', 'zh'];
+    return ['vi', 'en'];
   }
 }
 
