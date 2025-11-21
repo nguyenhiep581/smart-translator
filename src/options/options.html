@@ -64,19 +64,14 @@
 
           <div class="card">
             <h3 class="card-title">Select AI Provider</h3>
-            <div class="provider-options">
-              <label class="provider-option">
-                <input type="radio" name="provider" value="openai" />
-                <div class="provider-card">
-                  <div class="provider-name">OpenAI</div>
-                </div>
-              </label>
-              <label class="provider-option">
-                <input type="radio" name="provider" value="claude" />
-                <div class="provider-card">
-                  <div class="provider-name">Claude</div>
-                </div>
-              </label>
+            <div class="form-group">
+              <label class="form-label" for="provider-select">Provider</label>
+              <select id="provider-select" class="form-select">
+                <option value="openai">OpenAI</option>
+                <option value="claude">Claude</option>
+                <option value="gemini">Gemini</option>
+                <option value="copilot">Copilot</option>
+              </select>
             </div>
           </div>
 
@@ -174,6 +169,72 @@
             </div>
           </div>
 
+          <div class="card" id="gemini-config" style="display: none">
+            <h3 class="card-title">Gemini Configuration</h3>
+            <div class="form-group">
+              <label class="form-label">API Key</label>
+              <input type="password" id="gemini-api-key" class="form-input" placeholder="AIza..." />
+              <div class="form-help">Key is passed via request URL.</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">API Host (Optional)</label>
+              <input
+                type="url"
+                id="gemini-host"
+                class="form-input"
+                placeholder="https://generativelanguage.googleapis.com"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">API Path (Optional)</label>
+              <input
+                type="text"
+                id="gemini-path"
+                class="form-input"
+                placeholder="/v1beta/models/gemini-pro:generateContent"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Model</label>
+              <input type="text" id="gemini-model" class="form-input" placeholder="gemini-pro" />
+            </div>
+          </div>
+
+          <div class="card" id="copilot-config" style="display: none">
+            <h3 class="card-title">Copilot Configuration</h3>
+            <div class="form-group">
+              <label class="form-label">API Key</label>
+              <input
+                type="password"
+                id="copilot-api-key"
+                class="form-input"
+                placeholder="ghu_xxx"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">API Host (Optional)</label>
+              <input
+                type="url"
+                id="copilot-host"
+                class="form-input"
+                placeholder="https://api.githubcopilot.com"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">API Path (Optional)</label>
+              <input
+                type="text"
+                id="copilot-path"
+                class="form-input"
+                placeholder="/chat/completions"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Model</label>
+              <input type="text" id="copilot-model" class="form-input" placeholder="gpt-4o-mini" />
+            </div>
+          </div>
+
           <div class="card">
             <h3 class="card-title">System Prompt</h3>
             <div class="form-group">
@@ -214,14 +275,6 @@
               </label>
               <div class="form-help">
                 Press Ctrl (or Cmd on Mac) after selecting text to instantly show translation popup
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="sidepanel-hotkey">Side Panel Hotkey</label>
-              <input type="text" id="sidepanel-hotkey" class="form-input" placeholder="Alt+S" />
-              <div class="form-help">
-                Works while a page is focused. Use modifiers like Ctrl/Cmd, Alt/Option, Shift (e.g.
-                Ctrl+Shift+S). Leave blank to disable.
               </div>
             </div>
           </div>

@@ -48,22 +48,27 @@ document.querySelectorAll('.nav-item').forEach((item) => {
 });
 
 // Provider selection
-document.querySelectorAll('input[name="provider"]').forEach((radio) => {
-  radio.addEventListener('change', (e) => {
-    const provider = e.target.value;
-
-    // Hide all config cards
-    document.getElementById('openai-config').style.display = 'none';
-    document.getElementById('claude-config').style.display = 'none';
-
-    // Show selected provider config
-    document.getElementById(`${provider}-config`).style.display = 'block';
+function hideAllProviderCards() {
+  ['openai', 'claude', 'gemini', 'copilot'].forEach((provider) => {
+    const el = document.getElementById(`${provider}-config`);
+    if (el) {
+      el.style.display = 'none';
+    }
   });
+}
+
+document.getElementById('provider-select').addEventListener('change', (e) => {
+  const provider = e.target.value;
+  hideAllProviderCards();
+  const card = document.getElementById(`${provider}-config`);
+  if (card) {
+    card.style.display = 'block';
+  }
 });
 
 // Save provider settings
 document.getElementById('save-provider')?.addEventListener('click', async () => {
-  const provider = document.querySelector('input[name="provider"]:checked')?.value;
+  const provider = document.getElementById('provider-select').value;
 
   if (!provider) {
     alert('Please select a provider');
@@ -93,6 +98,24 @@ document.getElementById('save-provider')?.addEventListener('click', async () => 
       host: document.getElementById('claude-host').value || 'https://api.anthropic.com',
       path: document.getElementById('claude-path').value || '/v1/messages',
       availableModels: availableModels,
+    };
+  } else if (provider === 'gemini') {
+    config.gemini = {
+      apiKey: document.getElementById('gemini-api-key').value,
+      model: document.getElementById('gemini-model').value || 'gemini-pro',
+      host:
+        document.getElementById('gemini-host').value || 'https://generativelanguage.googleapis.com',
+      path:
+        document.getElementById('gemini-path').value || '/v1beta/models/gemini-pro:generateContent',
+      availableModels: [],
+    };
+  } else if (provider === 'copilot') {
+    config.copilot = {
+      apiKey: document.getElementById('copilot-api-key').value,
+      model: document.getElementById('copilot-model').value || 'gpt-4o-mini',
+      host: document.getElementById('copilot-host').value || 'https://api.githubcopilot.com',
+      path: document.getElementById('copilot-path').value || '/chat/completions',
+      availableModels: [],
     };
   }
 
@@ -267,15 +290,11 @@ async function getAvailableModels(provider, buttonId) {
 document.getElementById('save-language')?.addEventListener('click', async () => {
   const defaultTarget = document.getElementById('default-target').value;
   const enableCtrlShortcut = document.getElementById('enable-ctrl-shortcut').checked;
-  const sidePanelHotkey = normalizeHotkeyInput(
-    document.getElementById('sidepanel-hotkey').value.trim(),
-  );
 
   try {
     const settings = await loadSettings();
     settings.defaultTargetLang = defaultTarget;
     settings.enableCtrlShortcut = enableCtrlShortcut;
-    settings.sidePanelHotkey = sidePanelHotkey;
     await saveSettings(settings);
     showNotification('Language settings saved', 'success');
   } catch (err) {
@@ -344,7 +363,8 @@ async function loadSettingsUI() {
 
     // Provider
     if (settings.provider) {
-      document.querySelector(`input[name="provider"][value="${settings.provider}"]`).checked = true;
+      document.getElementById('provider-select').value = settings.provider;
+      hideAllProviderCards();
       document.getElementById(`${settings.provider}-config`).style.display = 'block';
 
       if (settings.provider === 'openai' && settings.openai) {
@@ -381,6 +401,16 @@ async function loadSettingsUI() {
           });
         }
         claudeModelSelect.value = settings.claude.model || 'claude-haiku-4-5-20251001';
+      } else if (settings.provider === 'gemini' && settings.gemini) {
+        document.getElementById('gemini-api-key').value = settings.gemini.apiKey || '';
+        document.getElementById('gemini-host').value = settings.gemini.host || '';
+        document.getElementById('gemini-path').value = settings.gemini.path || '';
+        document.getElementById('gemini-model').value = settings.gemini.model || 'gemini-pro';
+      } else if (settings.provider === 'copilot' && settings.copilot) {
+        document.getElementById('copilot-api-key').value = settings.copilot.apiKey || '';
+        document.getElementById('copilot-host').value = settings.copilot.host || '';
+        document.getElementById('copilot-path').value = settings.copilot.path || '';
+        document.getElementById('copilot-model').value = settings.copilot.model || 'gpt-4o-mini';
       }
     }
 
@@ -401,12 +431,6 @@ async function loadSettingsUI() {
       // Default to enabled
       document.getElementById('enable-ctrl-shortcut').checked = true;
     }
-
-    const hotkeyValue =
-      settings.sidePanelHotkey !== undefined
-        ? settings.sidePanelHotkey
-        : DEFAULT_CONFIG.sidePanelHotkey;
-    document.getElementById('sidepanel-hotkey').value = hotkeyValue || '';
 
     // Cache
     if (settings.cache) {

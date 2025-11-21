@@ -6,6 +6,8 @@ import { debug, error, initLogger } from '../utils/logger.js';
 import { getStorage, setStorage } from '../utils/storage.js';
 import { OpenAITranslator } from './translator/openAITranslator.js';
 import { ClaudeTranslator } from './translator/claudeTranslator.js';
+import { GeminiTranslator } from './translator/geminiTranslator.js';
+import { CopilotTranslator } from './translator/copilotTranslator.js';
 import { CacheService } from './cache/cacheService.js';
 import { detectLanguage } from './services/detectLanguage.js';
 
@@ -187,6 +189,10 @@ function createTranslator(config) {
       return new OpenAITranslator(config.openai);
     case 'claude':
       return new ClaudeTranslator(config.claude);
+    case 'gemini':
+      return new GeminiTranslator(config.gemini);
+    case 'copilot':
+      return new CopilotTranslator(config.copilot);
     default:
       throw new Error(`Unknown provider: ${config.provider}`);
   }

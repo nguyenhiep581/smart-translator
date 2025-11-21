@@ -25,6 +25,26 @@ export const DEFAULT_CONFIG = {
     maxTokens: 2048,
   },
 
+  // Gemini settings
+  gemini: {
+    apiKey: '',
+    model: 'gemini-pro',
+    host: 'https://generativelanguage.googleapis.com',
+    path: '/v1beta/models/gemini-pro:generateContent',
+    temperature: 0.3,
+    maxTokens: 2048,
+  },
+
+  // Copilot settings (OpenAI-compatible)
+  copilot: {
+    apiKey: '',
+    model: 'gpt-4o-mini',
+    host: 'https://api.githubcopilot.com',
+    path: '/chat/completions',
+    temperature: 0.3,
+    maxTokens: 2048,
+  },
+
   // Language settings
   defaultFromLang: 'auto',
   defaultToLang: 'vi',
