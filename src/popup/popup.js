@@ -20,6 +20,12 @@ document.getElementById('open-options').addEventListener('click', () => {
   chrome.runtime.openOptionsPage();
 });
 
+// Open chat
+document.getElementById('open-chat').addEventListener('click', () => {
+  const url = chrome.runtime.getURL('src/chat/chat.html');
+  chrome.tabs.create({ url });
+});
+
 // Open Chrome shortcuts page to set keyboard shortcut
 document.getElementById('open-shortcuts').addEventListener('click', () => {
   chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });

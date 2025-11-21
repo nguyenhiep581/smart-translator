@@ -32,6 +32,7 @@ export default defineConfig({
             popup: resolve(__dirname, 'src/popup/popup.html'),
             options: resolve(__dirname, 'src/options/options.html'),
             sidepanel: resolve(__dirname, 'src/sidepanel/sidepanel.html'),
+            chat: resolve(__dirname, 'src/chat/chat.html'),
             ui: resolve(__dirname, 'src/content/ui.css'),
             expandPanel: resolve(__dirname, 'src/content/expandPanel.css'),
           },

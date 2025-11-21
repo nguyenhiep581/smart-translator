@@ -10,6 +10,16 @@ import { GeminiTranslator } from './translator/geminiTranslator.js';
 import { CopilotTranslator } from './translator/copilotTranslator.js';
 import { CacheService } from './cache/cacheService.js';
 import { detectLanguage } from './services/detectLanguage.js';
+import {
+  getConversations,
+  saveConversations,
+  upsertConversation,
+  deleteConversation,
+  createEmptyConversation,
+  sendChatMessage,
+  streamChatMessage,
+  ensureSummaryIfNeeded,
+} from './services/chatService.js';
 
 const cacheService = new CacheService();
 
@@ -44,6 +54,26 @@ export async function handleMessage(message, sender, sendResponse) {
 
       case 'updateDebugMode':
         await handleUpdateDebugMode(message.payload, sendResponse);
+        break;
+
+      case 'chatList':
+        await handleChatList(sendResponse);
+        break;
+
+      case 'chatCreate':
+        await handleChatCreate(message.payload, sendResponse);
+        break;
+
+      case 'chatUpdate':
+        await handleChatUpdate(message.payload, sendResponse);
+        break;
+
+      case 'chatDelete':
+        await handleChatDelete(message.payload, sendResponse);
+        break;
+
+      case 'chatSend':
+        await handleChatSend(message.payload, sendResponse);
         break;
 
       default:
@@ -177,6 +207,167 @@ async function handleUpdateDebugMode(payload, sendResponse) {
   } catch (err) {
     error('Update debug mode error:', err);
     sendResponse({ success: false, error: err.message });
+  }
+}
+
+async function handleChatList(sendResponse) {
+  try {
+    const conversations = await getConversations();
+    sendResponse({ success: true, data: conversations });
+  } catch (err) {
+    error('Chat list error:', err);
+    sendResponse({ success: false, error: err.message });
+  }
+}
+
+async function handleChatCreate(payload, sendResponse) {
+  try {
+    const { provider, model, systemPrompt, maxTokens } = payload;
+    const convo = createEmptyConversation(provider, model, systemPrompt || '', maxTokens || 10000);
+    await upsertConversation(convo);
+    sendResponse({ success: true, data: convo });
+  } catch (err) {
+    error('Chat create error:', err);
+    sendResponse({ success: false, error: err.message });
+  }
+}
+
+async function handleChatUpdate(payload, sendResponse) {
+  try {
+    const { conversation } = payload;
+    if (!conversation || !conversation.id) {
+      sendResponse({ success: false, error: 'Invalid conversation' });
+      return;
+    }
+    conversation.updatedAt = Date.now();
+    await upsertConversation(conversation);
+    sendResponse({ success: true, data: conversation });
+  } catch (err) {
+    error('Chat update error:', err);
+    sendResponse({ success: false, error: err.message });
+  }
+}
+
+async function handleChatDelete(payload, sendResponse) {
+  try {
+    const { id } = payload;
+    await deleteConversation(id);
+    sendResponse({ success: true });
+  } catch (err) {
+    error('Chat delete error:', err);
+    sendResponse({ success: false, error: err.message });
+  }
+}
+
+async function handleChatSend(payload, sendResponse) {
+  try {
+    const { conversation, message } = payload;
+    if (!conversation || !conversation.id) {
+      sendResponse({ success: false, error: 'Conversation missing' });
+      return;
+    }
+    if (!message || !message.content) {
+      sendResponse({ success: false, error: 'Message missing' });
+      return;
+    }
+
+    // Fetch latest config for provider settings
+    const { config } = await getStorage('config');
+    if (!config) {
+      sendResponse({ success: false, error: 'Config not found' });
+      return;
+    }
+
+    const convo = { ...conversation, messages: conversation.messages || [] };
+
+    const userPayload = {
+      role: 'user',
+      content: message.content,
+      attachments: (message.attachments || []).slice(0, 3),
+    };
+
+    const assistantReply = await sendChatMessage(config, convo, userPayload);
+
+    convo.messages.push(userPayload);
+
+    convo.messages.push({ role: 'assistant', content: assistantReply });
+    if (!convo.title || convo.title === 'New chat') {
+      convo.title = message.content.slice(0, 40) || 'Conversation';
+    }
+    convo.updatedAt = Date.now();
+
+    await upsertConversation(convo);
+    sendResponse({ success: true, data: convo });
+  } catch (err) {
+    error('Chat send error:', err);
+    sendResponse({ success: false, error: err.message });
+  }
+}
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== 'chat-stream') {
+    return;
+  }
+
+  port.onMessage.addListener(async (msg) => {
+    if (msg.type === 'chatSend') {
+      await handleChatStream(port, msg.payload);
+    }
+  });
+});
+
+async function handleChatStream(port, payload) {
+  try {
+    const { conversation, message } = payload;
+    if (!conversation || !conversation.id) {
+      port.postMessage({ type: 'chatStreamError', error: 'Conversation missing' });
+      return;
+    }
+    if (!message || !message.content) {
+      port.postMessage({ type: 'chatStreamError', error: 'Message missing' });
+      return;
+    }
+
+    const { config } = await getStorage('config');
+    if (!config) {
+      port.postMessage({ type: 'chatStreamError', error: 'Config not found' });
+      return;
+    }
+
+    const convo = { ...conversation, messages: conversation.messages || [] };
+    const userPayload = {
+      role: 'user',
+      content: message.content,
+      attachments: (message.attachments || []).slice(0, 3),
+    };
+
+    // Summary if needed
+    await ensureSummaryIfNeeded(config, convo, userPayload);
+
+    let assistantText = '';
+    const onChunk = (text, done) => {
+      assistantText = text;
+      port.postMessage({
+        type: 'chatStreamChunk',
+        conversationId: convo.id,
+        content: text,
+        done,
+      });
+    };
+
+    await streamChatMessage(config, convo, userPayload, onChunk);
+
+    convo.messages.push(userPayload);
+    convo.messages.push({ role: 'assistant', content: assistantText });
+    if (!convo.title || convo.title === 'New chat') {
+      convo.title = message.content.slice(0, 40) || 'Conversation';
+    }
+    convo.updatedAt = Date.now();
+
+    await upsertConversation(convo);
+    port.postMessage({ type: 'chatStreamDone', conversation: convo });
+  } catch (err) {
+    port.postMessage({ type: 'chatStreamError', error: err.message });
   }
 }
 

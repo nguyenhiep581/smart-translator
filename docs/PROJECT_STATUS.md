@@ -101,6 +101,9 @@ Assets:           5 files
   - Cache management
   - Analytics dashboard
   - About section
+- ✅ Chat page (ChatGPT-style chat with history, model selection, streaming, image attachments)
+  - Summarization for long history (keeps last messages, collapses older into summary)
+  - Retry affordance on streaming errors
 
 **Files**:
 - `popup/popup.html` - Popup structure
@@ -109,6 +112,9 @@ Assets:           5 files
 - `options/options.html` - Options structure
 - `options/options.js` - Options logic
 - `options/options.css` - Options styles
+- `chat/chat.html` - Chat UI structure
+- `chat/chat.js` - Chat logic (streaming, history, attachments)
+- `chat/chat.css` - Chat styles
 
 #### **5. Build System**
 - ✅ Vite configuration for multi-entry build

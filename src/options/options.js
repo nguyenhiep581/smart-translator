@@ -152,6 +152,16 @@ document.getElementById('claude-get-models')?.addEventListener('click', async ()
   await getAvailableModels('claude', 'claude-get-models');
 });
 
+// Get Gemini models
+document.getElementById('gemini-get-models')?.addEventListener('click', async () => {
+  await getAvailableModels('gemini', 'gemini-get-models');
+});
+
+// Get Copilot models
+document.getElementById('copilot-get-models')?.addEventListener('click', async () => {
+  await getAvailableModels('copilot', 'copilot-get-models');
+});
+
 // Helper function to test provider connection
 async function testProviderConnection(provider, buttonId) {
   const btn = document.getElementById(buttonId);
@@ -240,43 +250,57 @@ async function getAvailableModels(provider, buttonId) {
       return;
     }
 
-    const response = await fetch(modelsEndpoint, { headers });
+    let models = [];
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    if (provider === 'openai' && data.data) {
-      // Filter for GPT models
-      const gptModels = data.data
-        .filter((m) => m.id.includes('gpt'))
-        .map((m) => m.id)
-        .slice(0, 10);
-
-      if (gptModels.length > 0) {
-        showNotification(`Available models:\n${gptModels.join('\n')}`, 'success');
-
-        // Update select dropdown with available models
-        const select = document.getElementById('openai-model');
-        const currentValue = select.value;
-
-        // Add new models to dropdown if not already present
-        gptModels.forEach((modelId) => {
-          if (!Array.from(select.options).some((opt) => opt.value === modelId)) {
-            const option = document.createElement('option');
-            option.value = modelId;
-            option.textContent = modelId;
-            select.appendChild(option);
-          }
-        });
-
-        // Restore current value
-        select.value = currentValue;
-      } else {
-        showNotification('No GPT models found', 'error');
+    if (provider === 'openai') {
+      const host = document.getElementById('openai-host').value || 'https://api.openai.com';
+      const apiKey = document.getElementById('openai-api-key').value;
+      if (!apiKey) {
+        showNotification('Enter OpenAI API key first', 'error');
+        return;
       }
+      const response = await fetch(host.replace(/\/$/, '') + '/v1/models', {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const data = await response.json();
+      models = (data.data || [])
+        .map((m) => m.id)
+        .filter((id) => id.includes('gpt') || id.includes('o'));
+      updateModelSelect('openai-model', models, 'openai');
+      showNotification(`OpenAI models: ${models.slice(0, 6).join(', ')}`, 'success');
+    } else if (provider === 'claude') {
+      models = [
+        'claude-haiku-4-5-20251001',
+        'claude-3-opus-20240229',
+        'claude-3-sonnet-20240229',
+        'claude-3-haiku-20240307',
+      ];
+      updateModelSelect('claude-model', models, 'claude');
+      showNotification('Claude models preset loaded', 'success');
+    } else if (provider === 'gemini') {
+      const host =
+        document.getElementById('gemini-host').value || 'https://generativelanguage.googleapis.com';
+      const apiKey = document.getElementById('gemini-api-key').value;
+      if (!apiKey) {
+        showNotification('Enter Gemini API key first', 'error');
+        return;
+      }
+      const url = `${host.replace(/\/$/, '')}/v1beta/models?key=${apiKey}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const data = await response.json();
+      models = (data.models || []).map((m) => m.name || '').filter(Boolean);
+      updateModelSelect('gemini-model', models, 'gemini');
+      showNotification(`Gemini models: ${models.slice(0, 6).join(', ')}`, 'success');
+    } else if (provider === 'copilot') {
+      models = ['gpt-4o-mini', 'gpt-4o'];
+      updateModelSelect('copilot-model', models, 'copilot');
+      showNotification('Copilot models preset loaded', 'success');
     }
   } catch (err) {
     showNotification(`❌ Failed to fetch models: ${err.message}`, 'error');
@@ -284,6 +308,29 @@ async function getAvailableModels(provider, buttonId) {
     btn.textContent = originalText;
     btn.disabled = false;
   }
+}
+
+async function updateModelSelect(selectId, models, providerKey) {
+  if (!models || models.length === 0) {
+    return;
+  }
+  const select = document.getElementById(selectId);
+  const currentValue = select.value;
+  select.innerHTML = '';
+  models.forEach((modelId) => {
+    const option = document.createElement('option');
+    option.value = modelId;
+    option.textContent = modelId;
+    select.appendChild(option);
+  });
+  select.value = models.includes(currentValue) ? currentValue : models[0];
+  const settings = await loadSettings();
+  settings[providerKey] = settings[providerKey] || {};
+  settings[providerKey].availableModels = models;
+  if (!settings[providerKey].model || !models.includes(settings[providerKey].model)) {
+    settings[providerKey].model = models[0];
+  }
+  await saveSettings(settings);
 }
 
 // Save language settings
@@ -493,35 +540,6 @@ function showNotification(message, type = 'info') {
     notification.style.animation = 'slideOut 0.3s ease';
     setTimeout(() => notification.remove(), 300);
   }, 2000); // Reduced from 5000 to 2000ms
-}
-
-function normalizeHotkeyInput(value) {
-  if (!value) {
-    return '';
-  }
-
-  const parts = value
-    .split('+')
-    .map((part) => part.trim())
-    .filter(Boolean);
-  return parts
-    .map((part) => {
-      const lower = part.toLowerCase();
-      if (lower === 'cmd' || lower === 'command' || lower === 'meta') {
-        return 'Cmd';
-      }
-      if (lower === 'ctrl' || lower === 'control') {
-        return 'Ctrl';
-      }
-      if (lower === 'alt' || lower === 'option') {
-        return 'Alt';
-      }
-      if (lower === 'shift') {
-        return 'Shift';
-      }
-      return part.length === 1 ? part.toUpperCase() : part.charAt(0).toUpperCase() + part.slice(1);
-    })
-    .join('+');
 }
 
 // Add animation styles

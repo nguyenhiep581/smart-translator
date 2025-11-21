@@ -23,7 +23,9 @@ smart-translator/
 │   │   └── translator/     # Translation providers
 │   │       ├── baseTranslator.js   # Abstract base class
 │   │       ├── openAITranslator.js # OpenAI implementation
-│   │       └── claudeTranslator.js # Claude implementation
+│   │       ├── claudeTranslator.js # Claude implementation
+│   │       ├── geminiTranslator.js # Gemini implementation
+│   │       └── copilotTranslator.js # Copilot implementation
 │   │
 │   ├── content/            # Content Scripts (injected into pages)
 │   │   ├── content.js      # Main entry point
@@ -37,6 +39,11 @@ smart-translator/
 │   │   ├── popup.html
 │   │   ├── popup.js
 │   │   └── popup.css
+│   │
+│   ├── chat/               # ChatGPT-style page (new tab)
+│   │   ├── chat.html
+│   │   ├── chat.js
+│   │   └── chat.css
 │   │
 │   ├── options/            # Settings Page
 │   │   ├── options.html

@@ -18,6 +18,7 @@ A high-performance Chrome Extension for AI-powered translation with DeepL-style 
 - ⏱️ **Smart Timeout** - 30-second timeout prevents hanging on slow APIs
 - 📊 **Analytics** - Track usage statistics (local only, no telemetry)
 - 🐛 **Debug Mode** - Toggle detailed console logging
+- 💬 **Chat Mode** - ChatGPT-style chat with history, model selection, up to 3 image attachments, and streaming replies
 
 ## 🚀 Quick Start
 
@@ -46,6 +47,7 @@ make build
 # 2. Enable "Developer mode"
 # 3. Click "Load unpacked"
 # 4. Select the `dist/` folder
+# 5. (Optional) Set a shortcut in chrome://extensions/shortcuts for side panel
 ```
 
 ### Configure API Keys
@@ -134,6 +136,13 @@ smart-translator/
 - Editable text areas
 - Change languages on the fly
 - Auto-translate when switching languages
+
+### Chat Mode
+
+- Popup → **Open Chat** (opens chat in a new tab)
+- Choose provider/model, system prompt, max tokens
+- Saved recent conversations (uses last 6 messages for context)
+- Streaming responses (OpenAI/Copilot/Claude) and up to 3 image attachments per message
 
 ## ⚙️ Configuration
 
@@ -296,11 +305,6 @@ We welcome contributions! Please read our guidelines:
 
 MIT License - see [LICENSE](./LICENSE) file for details.
 
-## 💬 Support
-
-- **Issues**: [GitHub Issues](https://github.com/your-org/smart-translator/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/smart-translator/discussions)
-
 ## 🙏 Acknowledgments
 
 - Inspired by [DeepL](https://www.deepl.com/) UX
@@ -309,7 +313,7 @@ MIT License - see [LICENSE](./LICENSE) file for details.
 
 ---
 
-**Made with ❤️ by the Smart Translator Team**
+**Made with ❤️ by hiepnguyen**
 
 ## License
 

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Translator Chat</title>
+    <link rel="stylesheet" href="chat.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <aside class="sidebar">
+        <header class="sidebar-header">
+          <div class="brand">
+            <span class="dot"></span>
+            <span>Smart Translator Chat</span>
+          </div>
+          <button id="new-chat" class="btn btn-primary btn-sm">New chat</button>
+        </header>
+        <div class="sidebar-section">
+          <label class="section-label">Model</label>
+          <select id="model-select" class="form-select"></select>
+        </div>
+        <div class="sidebar-section">
+          <label class="section-label">Search</label>
+          <input
+            id="search-convo"
+            class="form-input search-input"
+            type="text"
+            placeholder="Search conversations..."
+          />
+        </div>
+        <div class="sidebar-section">
+          <label class="section-label">Conversations</label>
+          <div id="conversation-list" class="conversation-list"></div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="main-header">
+          <div class="settings-bar">
+            <button id="btn-system-prompt" class="btn btn-secondary btn-sm">
+              🧠 System prompt
+            </button>
+            <button id="btn-max-tokens" class="btn btn-secondary btn-sm">🧮 Max tokens</button>
+            <button id="btn-prompts" class="btn btn-secondary btn-sm">📚 Prompts</button>
+          </div>
+        </header>
+
+        <section id="messages" class="messages"></section>
+
+        <footer class="composer">
+          <div id="chat-error" class="chat-error" style="display: none"></div>
+          <div id="attachment-previews" class="attachments"></div>
+          <div class="composer-row">
+            <input id="file-input" type="file" accept="image/*" multiple hidden />
+            <button id="attach-btn" class="btn btn-ghost" title="Attach image (max 3)">📎</button>
+            <textarea
+              id="input"
+              class="composer-input"
+              placeholder="Type a message..."
+              rows="3"
+            ></textarea>
+            <button id="send-btn" class="btn btn-primary btn-send">
+              Send
+              <span class="btn-hint">Enter</span>
+            </button>
+          </div>
+        </footer>
+      </main>
+
+      <div id="settings-modal" class="modal-hidden">
+        <div id="modal-backdrop" class="modal-backdrop"></div>
+        <div class="modal">
+          <div class="modal-header">
+            <h3>Chat settings</h3>
+            <button id="close-modal" class="btn btn-ghost btn-sm">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="field">
+              <label>System prompt</label>
+              <textarea
+                id="modal-system-prompt"
+                class="form-textarea"
+                rows="4"
+                placeholder="You are a helpful assistant."
+              ></textarea>
+            </div>
+            <div class="field compact">
+              <label>Max tokens</label>
+              <input
+                id="modal-max-tokens"
+                type="number"
+                class="form-input"
+                min="256"
+                max="10000"
+                step="128"
+              />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="modal-cancel" class="btn btn-ghost btn-sm">Cancel</button>
+            <button id="modal-save" class="btn btn-primary btn-sm">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="prompts-modal" class="modal-hidden">
+        <div id="prompts-backdrop" class="modal-backdrop"></div>
+        <div class="modal">
+          <div class="modal-header">
+            <h3>Prompt Library</h3>
+            <button id="close-prompts" class="btn btn-ghost btn-sm">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="field">
+              <label>Title</label>
+              <input id="prompt-title" type="text" class="form-input" placeholder="Short name" />
+            </div>
+            <div class="field">
+              <label>Prompt</label>
+              <textarea
+                id="prompt-text"
+                class="form-textarea"
+                rows="4"
+                placeholder="Prompt text..."
+              ></textarea>
+            </div>
+            <button id="prompt-save" class="btn btn-primary btn-sm">Save prompt</button>
+            <div id="prompt-list" class="prompt-list"></div>
+          </div>
+          <div class="modal-footer">
+            <button id="prompts-close-btn" class="btn btn-ghost btn-sm">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="chat.js"></script>
+  </body>
+</html>
