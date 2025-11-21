@@ -7,14 +7,13 @@ import { getSelection } from '../utils/dom.js';
 import { showFloatingIcon, hideFloatingIcon } from './floatingIcon.js';
 import { isMiniPopupVisible, isExpandPanelOpen, showMiniPopup } from './miniPopup.js';
 
-let ctrlShortcutEnabled = true; // Default to enabled
-
+let ctrlShortcutEnabled = false; // Default to disabled
 // Initialize logger with saved debug mode
 (async () => {
   try {
     const result = await chrome.storage.local.get('config');
     const debugMode = result.config?.debugMode || false;
-    ctrlShortcutEnabled = result.config?.enableCtrlShortcut !== false; // Default to true
+    ctrlShortcutEnabled = result.config?.enableCtrlShortcut === true; // Default to false
     initLogger(debugMode);
     debug('Content script initialized with debug mode:', debugMode);
     debug('Ctrl shortcut enabled:', ctrlShortcutEnabled);
@@ -48,8 +47,21 @@ document.addEventListener('keydown', handleKeyDown);
  * Handle keyboard shortcut (Ctrl to show translation)
  */
 function handleKeyDown(event) {
-  // Check if shortcut is enabled and Ctrl key is pressed (Cmd on Mac is also treated as Ctrl)
-  if (ctrlShortcutEnabled && (event.ctrlKey || event.metaKey)) {
+  // Check if shortcut is enabled
+  if (!ctrlShortcutEnabled) {
+    return;
+  }
+
+  // Only trigger on Ctrl/Cmd key alone (no other keys like C, V, A, etc.)
+  // event.key will be 'Control' or 'Meta' when only modifier is pressed
+  const isOnlyModifier = event.key === 'Control' || event.key === 'Meta';
+
+  if (!isOnlyModifier) {
+    return;
+  }
+
+  // Check if Ctrl/Cmd is pressed
+  if (event.ctrlKey || event.metaKey) {
     const selection = getSelection();
 
     // If there's selected text and no UI is visible, show mini popup directly

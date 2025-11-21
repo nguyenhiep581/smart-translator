@@ -50,7 +50,6 @@ Assets:           5 files
 - ✅ Provider factory pattern (OpenAI/Claude)
 - ✅ Two-layer caching system (Memory LRU + Persistent)
 - ✅ Language detection (offline + API fallback)
-- ✅ Telemetry tracking
 
 **Files**:
 - `background.js` - Main service worker
@@ -62,7 +61,6 @@ Assets:           5 files
 - `cache/persistentCache.js` - Chrome storage wrapper
 - `cache/cacheService.js` - Cache coordinator
 - `services/detectLanguage.js` - franc-min + API detection
-- `services/telemetry.js` - Usage statistics
 
 #### **2. Configuration & Utilities**
 - ✅ Default settings with provider configs

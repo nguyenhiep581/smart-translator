@@ -99,6 +99,59 @@ Cache Key:
 {provider}-{model}-{from}-{to}-{hash(originalText)}
 ```
 
+## **1.9 Right Side Panel Translation (Chrome Side Panel API)**
+
+**Overview:**
+- Use Chrome's native Side Panel API (Chrome 114+) for persistent translation UI
+- Panel appears on the right side of browser window
+- Stays open across tabs when pinned
+- No DOM injection needed
+
+**Features:**
+- **Textarea Input**: Large text area for translation input
+- **Multi-language Selection**: Select multiple target languages at once
+- **Batch Translation**: Translate to multiple languages simultaneously
+- **Persistent UI**: Panel state persists across tab switches
+- **Keyboard Shortcut**: Alt+S to toggle side panel
+- **Clean Architecture**: Isolated from webpage DOM
+
+**UI Layout:**
+```
+┌─────────────────────────────┐
+│  Smart Translator (Sidebar) │
+├─────────────────────────────┤
+│ [Textarea: text to translate]│
+│                             │
+├─────────────────────────────┤
+│ Target languages (multi-select) │
+│ ☑ Vietnamese                │
+│ ☑ English                   │
+│ ☐ Japanese                  │
+├─────────────────────────────┤
+│  [Translate]                │
+├─────────────────────────────┤
+│ Results per language        │
+│  📝 Vietnamese              │
+│  Translation result...      │
+│  📝 English                 │
+│  Translation result...      │
+└─────────────────────────────┘
+```
+
+**Architecture:**
+- `src/sidepanel/sidepanel.html` - Side panel UI
+- `src/sidepanel/sidepanel.js` - Panel logic
+- `src/sidepanel/sidepanel.css` - Panel styles
+- Communication: sidepanel.js → background.js → translator → results
+
+**Benefits:**
+- ✅ Persistent across tabs
+- ✅ No DOM pollution
+- ✅ Native Chrome feature
+- ✅ Better UX for long translations
+- ✅ Multi-language comparison
+- ✅ Keyboard shortcut support
+
 ---
 
 # #️⃣ **2. Architecture**
@@ -404,12 +457,143 @@ Display nicely in Options Page.
 
 ---
 
-# #️⃣ **10. OPTIONAL FEATURES (PHASE 2)**
+# #️⃣ **10. SIDE PANEL IMPLEMENTATION**
+
+## **10.1 Manifest Configuration**
+
+```json
+{
+  "manifest_version": 3,
+  "side_panel": {
+    "default_path": "sidepanel/sidepanel.html"
+  },
+  "commands": {
+    "toggle_sidepanel": {
+      "suggested_key": {
+        "default": "Alt+S"
+      },
+      "description": "Toggle Translation Side Panel"
+    }
+  },
+  "permissions": [
+    "sidePanel"
+  ]
+}
+```
+
+## **10.2 Background Service Setup**
+
+```javascript
+// Enable side panel on extension icon click
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+
+// Handle keyboard shortcut
+chrome.commands.onCommand.addListener((command) => {
+  if (command === 'toggle_sidepanel') {
+    chrome.windows.getCurrent((window) => {
+      chrome.sidePanel.open({ windowId: window.id });
+    });
+  }
+});
+```
+
+## **10.3 Side Panel UI Components**
+
+**HTML Structure:**
+- Header with title and close button
+- Large textarea for input (auto-resize)
+- Language selector (checkboxes for multi-select)
+- Translate button
+- Results section with tabs/accordion per language
+- Settings icon to open full options
+
+**Key Features:**
+- Remember last selected languages in storage
+- Show translation progress/loading state
+- Copy button for each translation result
+- Character count indicator
+- Clear input button
+
+## **10.4 Translation Workflow**
+
+```javascript
+// sidepanel.js
+async function translateMulti(text, targetLangs) {
+  const results = {};
+  
+  for (const lang of targetLangs) {
+    const response = await chrome.runtime.sendMessage({
+      type: 'translate',
+      payload: { text, from: 'auto', to: lang }
+    });
+    
+    if (response.success) {
+      results[lang] = response.data;
+    }
+  }
+  
+  return results;
+}
+```
+
+## **10.5 File Structure**
+
+```
+src/
+  sidepanel/
+    sidepanel.html       # Side panel UI
+    sidepanel.js         # Panel logic & translation handling
+    sidepanel.css        # Panel styles
+    components/
+      LanguageSelector.js
+      TranslationResult.js
+```
+
+## **10.6 Integration with Existing Features**
+
+- Share same translator implementations (OpenAI, Claude)
+- Use same cache service for efficiency
+- Reuse language constants from defaults.js
+- Share telemetry/stats tracking
+- Use same storage utilities
+
+## **10.7 Development Phases**
+
+**Phase 1: Setup (30 min)**
+- Add manifest side_panel config
+- Create sidepanel.html boilerplate
+- Register keyboard shortcut
+- Test panel opens/closes
+
+**Phase 2: UI Build (1-2 hours)**
+- Build textarea input
+- Create language multi-selector
+- Style translate button
+- Design results display area
+
+**Phase 3: Translation Logic (1 hour)**
+- Handle form submission
+- Integrate with background translator
+- Display results per language
+- Add loading states
+
+**Phase 4: Polish (1 hour)**
+- Persist selected languages
+- Add copy buttons
+- Character count
+- Error handling
+- Responsive design
+
+---
+
+# #️⃣ **11. OPTIONAL FEATURES (PHASE 2)**
 
 - Model auto-selection
 - Speech-to-translate
 - TTS output
 - Sync history across devices
+- Export translations to file
+- Side panel split view (source + target side-by-side)
 
 ---
 

@@ -1,0 +1,11 @@
+# Suggested Commands
+- Install deps: `make install` (pnpm install) or `pnpm install`.
+- Dev build/watch: `make dev` (one-time build) and `make watch` (dual watch). Load `dist/` in chrome://extensions after build.
+- Prod build: `make build`; multi-entry Vite build (background/content/etc.).
+- Package zip: `make zip` (creates smart-translator.zip from dist/).
+- Format: `make format` or `pnpm run format`; check-only `make format-check`.
+- Lint: `make lint` or `pnpm run lint`; autofix `make lint-fix` or `pnpm run lint:fix`.
+- Combined check: `make check` or `pnpm run check`.
+- Pre-commit hook dry-run: `make pre-commit` or `pnpm exec lint-staged`.
+- Clean: `make clean` (removes dist, node_modules, zip) — ensure reinstall afterwards.
+- Preview build (if needed): `pnpm run preview` after build.

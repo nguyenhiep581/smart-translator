@@ -45,13 +45,16 @@ export const DEFAULT_CONFIG = {
 
   // Advanced settings
   debugMode: false,
-  telemetryEnabled: true,
+  enableCtrlShortcut: false, // Ctrl/Cmd shortcut disabled by default
 
   // Keyboard shortcuts
   shortcuts: {
     translate: 'Ctrl+Shift+T',
     expandMode: 'Ctrl+Shift+E',
   },
+
+  // Side panel hotkey (in-page listener)
+  sidePanelHotkey: 'Alt+S',
 };
 
 /**

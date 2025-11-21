@@ -13,67 +13,9 @@
         <div class="popup-version">v1.0.0</div>
       </header>
 
-      <nav class="popup-nav">
-        <button class="nav-item active" data-section="quick">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M13 10V3L4 14h7v7l9-11h-7z"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          <span>Quick Translate</span>
-        </button>
-        <button class="nav-item" data-section="settings">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <path
-              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          <span>Settings</span>
-        </button>
-      </nav>
-
       <main class="popup-content">
-        <!-- Quick Translate Section -->
-        <section class="section" id="quick-section">
-          <div class="translate-box">
-            <textarea
-              id="input-text"
-              class="translate-input"
-              placeholder="Enter text to translate..."
-              rows="4"
-            ></textarea>
-
-            <div class="lang-controls">
-              <select id="to-lang" class="lang-select">
-                <!-- Options will be populated by JavaScript -->
-              </select>
-              <button id="translate-btn" class="btn btn-primary">Translate</button>
-            </div>
-
-            <div id="output-area" class="translate-output" style="display: none">
-              <div id="output-text"></div>
-              <button id="copy-output" class="btn btn-ghost btn-sm">Copy</button>
-            </div>
-          </div>
-        </section>
-
         <!-- Settings Section -->
-        <section class="section" id="settings-section" style="display: none">
+        <section class="section" id="settings-section">
           <div class="settings-list">
             <div class="setting-item">
               <div class="setting-label">Target Language</div>
@@ -102,7 +44,31 @@
             </div>
 
             <div class="setting-buttons">
-              <button class="btn btn-ghost btn-block" id="clear-cache">Clear Cache</button>
+              <button class="btn btn-ghost btn-block" id="clear-cache" style="display: none">
+                Clear Cache
+              </button>
+              <button class="btn btn-secondary btn-block" id="open-shortcuts">
+                Set keyboard shortcut
+              </button>
+              <button class="btn btn-primary btn-block" id="open-sidepanel">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style="margin-right: 4px"
+                >
+                  <path
+                    d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <span>Open Side Panel</span>
+                <span style="margin-left: auto; opacity: 0.7; font-size: 11px">Alt+S</span>
+              </button>
             </div>
           </div>
         </section>

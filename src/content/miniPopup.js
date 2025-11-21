@@ -3,7 +3,7 @@
  */
 
 import { createElement, escapeHtml, positionNearRect } from '../utils/dom.js';
-import { LANGUAGES, generateLanguageOptions } from '../config/defaults.js';
+import { generateLanguageOptions } from '../config/defaults.js';
 import { ExpandPanel } from './popupExpand.js';
 import { debug, error as logError } from '../utils/logger.js';
 

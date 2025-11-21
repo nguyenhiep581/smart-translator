@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Translator</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <div class="sp-content">
+      <!-- Language Selection -->
+      <div class="sp-lang-section">
+        <label for="target-langs" class="sp-label">Target Languages</label>
+        <div id="target-langs" class="sp-lang-pills">
+          <!-- Pills will be populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Input Section -->
+      <div class="sp-input-section">
+        <div class="sp-textarea-wrapper">
+          <textarea id="input-text" placeholder="Enter text to translate..." rows="6"></textarea>
+        </div>
+        <div class="sp-input-actions">
+          <span id="char-count">0 characters</span>
+          <button id="clear-btn">Clear</button>
+        </div>
+      </div>
+
+      <!-- Translate Button -->
+      <button id="translate-btn">
+        Translate
+        <span class="sp-shortcut-hint">Ctrl+Enter</span>
+      </button>
+
+      <!-- Results Section -->
+      <div class="sp-results-section">
+        <h3>Translations</h3>
+        <div id="results">
+          <div class="sp-empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <p>Select languages and click Translate</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="sidepanel.js" type="module"></script>
+  </body>
+</html>

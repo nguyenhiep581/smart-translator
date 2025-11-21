@@ -4,7 +4,7 @@
 
 import { loadSettings, saveSettings } from '../utils/storage.js';
 import { error as logError } from '../utils/logger.js';
-import { getTargetLanguages } from '../config/defaults.js';
+import { DEFAULT_CONFIG, getTargetLanguages } from '../config/defaults.js';
 
 // Populate language dropdown
 function populateLanguageSelect() {
@@ -267,11 +267,15 @@ async function getAvailableModels(provider, buttonId) {
 document.getElementById('save-language')?.addEventListener('click', async () => {
   const defaultTarget = document.getElementById('default-target').value;
   const enableCtrlShortcut = document.getElementById('enable-ctrl-shortcut').checked;
+  const sidePanelHotkey = normalizeHotkeyInput(
+    document.getElementById('sidepanel-hotkey').value.trim(),
+  );
 
   try {
     const settings = await loadSettings();
     settings.defaultTargetLang = defaultTarget;
     settings.enableCtrlShortcut = enableCtrlShortcut;
+    settings.sidePanelHotkey = sidePanelHotkey;
     await saveSettings(settings);
     showNotification('Language settings saved', 'success');
   } catch (err) {
@@ -333,22 +337,7 @@ document.getElementById('save-about')?.addEventListener('click', async () => {
   }
 });
 
-// Reset statistics
-document.getElementById('reset-stats')?.addEventListener('click', async () => {
-  if (!confirm('Are you sure you want to reset all statistics?')) {
-    return;
-  }
-
-  try {
-    await chrome.runtime.sendMessage({ type: 'resetTelemetry' });
-    showNotification('Statistics reset successfully', 'success');
-    await loadTelemetry();
-  } catch (err) {
-    showNotification('Failed to reset: ' + err.message, 'error');
-  }
-});
-
-// Load settings from storage
+// Show toast notification
 async function loadSettingsUI() {
   try {
     const settings = await loadSettings();
@@ -413,6 +402,12 @@ async function loadSettingsUI() {
       document.getElementById('enable-ctrl-shortcut').checked = true;
     }
 
+    const hotkeyValue =
+      settings.sidePanelHotkey !== undefined
+        ? settings.sidePanelHotkey
+        : DEFAULT_CONFIG.sidePanelHotkey;
+    document.getElementById('sidepanel-hotkey').value = hotkeyValue || '';
+
     // Cache
     if (settings.cache) {
       document.getElementById('cache-max-entries').value = settings.cache.maxEntries || 500;
@@ -445,23 +440,7 @@ async function loadCacheStats() {
   }
 }
 
-// Load telemetry
-async function loadTelemetry() {
-  try {
-    const response = await chrome.runtime.sendMessage({ type: 'getTelemetry' });
-    if (response.success) {
-      const stats = response.data;
-      document.getElementById('total-translations').textContent = stats.totalTranslations || 0;
-      document.getElementById('cache-hits').textContent = stats.cacheHits || 0;
-      document.getElementById('api-calls').textContent = stats.apiCalls || 0;
-      document.getElementById('errors').textContent = stats.errors || 0;
-    }
-  } catch (err) {
-    logError('Load telemetry failed:', err);
-  }
-}
-
-// Show notification
+// Show toast notification
 function showNotification(message, type = 'info') {
   // Create a better notification UI
   const notification = document.createElement('div');
@@ -492,6 +471,35 @@ function showNotification(message, type = 'info') {
   }, 2000); // Reduced from 5000 to 2000ms
 }
 
+function normalizeHotkeyInput(value) {
+  if (!value) {
+    return '';
+  }
+
+  const parts = value
+    .split('+')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts
+    .map((part) => {
+      const lower = part.toLowerCase();
+      if (lower === 'cmd' || lower === 'command' || lower === 'meta') {
+        return 'Cmd';
+      }
+      if (lower === 'ctrl' || lower === 'control') {
+        return 'Ctrl';
+      }
+      if (lower === 'alt' || lower === 'option') {
+        return 'Alt';
+      }
+      if (lower === 'shift') {
+        return 'Shift';
+      }
+      return part.length === 1 ? part.toUpperCase() : part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join('+');
+}
+
 // Add animation styles
 if (!document.getElementById('notification-styles')) {
   const style = document.createElement('style');
@@ -513,7 +521,6 @@ if (!document.getElementById('notification-styles')) {
 populateLanguageSelect();
 loadSettingsUI();
 loadCacheStats();
-loadTelemetry();
 
 // Show first section by default
 document.addEventListener('DOMContentLoaded', () => {

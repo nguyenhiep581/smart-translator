@@ -41,16 +41,6 @@
             </svg>
             Cache
           </button>
-          <button class="nav-item" data-section="telemetry">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                stroke="currentColor"
-                stroke-width="2"
-              />
-            </svg>
-            Analytics
-          </button>
           <button class="nav-item" data-section="about">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path
@@ -226,6 +216,14 @@
                 Press Ctrl (or Cmd on Mac) after selecting text to instantly show translation popup
               </div>
             </div>
+            <div class="form-group">
+              <label class="form-label" for="sidepanel-hotkey">Side Panel Hotkey</label>
+              <input type="text" id="sidepanel-hotkey" class="form-input" placeholder="Alt+S" />
+              <div class="form-help">
+                Works while a page is focused. Use modifiers like Ctrl/Cmd, Alt/Option, Shift (e.g.
+                Ctrl+Shift+S). Leave blank to disable.
+              </div>
+            </div>
           </div>
 
           <div class="card">
@@ -295,37 +293,6 @@
               <button id="clear-cache" class="btn btn-secondary">Clear All Cache</button>
               <div class="form-help">Remove all cached translations</div>
             </div>
-          </div>
-        </section>
-
-        <!-- Telemetry Section -->
-        <section class="section" id="telemetry-section" style="display: none">
-          <h2 class="section-title">Analytics</h2>
-
-          <div class="card">
-            <h3 class="card-title">Usage Statistics</h3>
-            <div class="stats-grid">
-              <div class="stat-card">
-                <div class="stat-value" id="total-translations">-</div>
-                <div class="stat-label">Total Translations</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-value" id="cache-hits">-</div>
-                <div class="stat-label">Cache Hits</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-value" id="api-calls">-</div>
-                <div class="stat-label">API Calls</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-value" id="errors">-</div>
-                <div class="stat-label">Errors</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="actions">
-            <button id="reset-stats" class="btn btn-secondary">Reset Statistics</button>
           </div>
         </section>
 

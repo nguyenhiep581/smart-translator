@@ -95,14 +95,6 @@ async function handleTranslate(payload, sendResponse) {
     // Cache the result
     await cacheService.set(cacheKey, translation);
 
-    // Track telemetry
-    await trackTelemetry({
-      provider: config.provider,
-      duration,
-      cacheHit: false,
-      success: true,
-    });
-
     sendResponse({
       success: true,
       data: translation,
@@ -111,13 +103,6 @@ async function handleTranslate(payload, sendResponse) {
     });
   } catch (err) {
     error('Translation error:', err);
-    await trackTelemetry({
-      provider: 'unknown',
-      duration: 0,
-      cacheHit: false,
-      success: false,
-      error: err.message,
-    });
     sendResponse({ success: false, error: err.message });
   }
 }
@@ -205,22 +190,4 @@ function createTranslator(config) {
     default:
       throw new Error(`Unknown provider: ${config.provider}`);
   }
-}
-
-/**
- * Track telemetry data
- */
-async function trackTelemetry(data) {
-  const { telemetry = [] } = await getStorage('telemetry');
-  telemetry.push({
-    ...data,
-    timestamp: Date.now(),
-  });
-
-  // Keep only last 100 entries
-  if (telemetry.length > 100) {
-    telemetry.splice(0, telemetry.length - 100);
-  }
-
-  await setStorage({ telemetry });
 }

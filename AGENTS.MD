@@ -52,7 +52,6 @@ All core features are ✅ **COMPLETE**:
 - ✅ Options page with full configuration
 - ✅ Popup page with quick translate
 - ✅ Debug logging system with toggle
-- ✅ Telemetry and statistics
 - ✅ Pre-commit hooks (Husky + lint-staged)
 - ✅ Prettier + ESLint configuration
 - ✅ Build system (Vite dual-build)
@@ -70,8 +69,7 @@ smart-translator/
 │   │   │   ├── memoryCache.js       # LRU (max 500)
 │   │   │   └── persistentCache.js   # chrome.storage.local
 │   │   ├── services/
-│   │   │   ├── detectLanguage.js    # franc-min + API
-│   │   │   └── telemetry.js         # Usage stats
+│   │   │   └── detectLanguage.js    # franc-min + API
 │   │   └── translator/
 │   │       ├── baseTranslator.js    # Abstract base
 │   │       ├── openAITranslator.js  # OpenAI impl
