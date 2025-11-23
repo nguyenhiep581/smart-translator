@@ -1,9 +1,14 @@
-name: Build and Zip
+name: Build and Release
 
 on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -32,9 +37,20 @@ jobs:
       - name: Create zip
         run: make zip
 
-      - name: Upload artifact
+      - name: Upload artifact (Build)
         uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/main'
         with:
-          name: smart-translator-dist
+          name: smart-translator-build
           path: smart-translator.zip
           retention-days: 7
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: smart-translator.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+
