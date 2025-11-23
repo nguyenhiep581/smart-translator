@@ -20,7 +20,7 @@ Before implementing features, familiarize yourself with:
 3. **[CODE_STYLE.md](./docs/CODE_STYLE.md)** - Coding standards and conventions
 4. **[FORMATTING.md](./docs/FORMATTING.md)** - Prettier, ESLint, and pre-commit hooks
 5. **[DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md)** - Visual design specifications and UI components
-6. **[API_SPECS.md](./docs/API_SPECS.md)** - OpenAI/Claude/Gemini API integration details
+6. **[API_SPECS.md](./docs/API_SPECS.md)** - OpenAI/Claude/Gemini/Search API integration details
 7. **[MAINTENANCE.md](./docs/MAINTENANCE.md)** - Release and maintenance procedures
 8. **[PROJECT_STATUS.md](./docs/PROJECT_STATUS.md)** - Current implementation status
 
@@ -46,6 +46,7 @@ All core features are ✅ **COMPLETE**:
 
 - ✅ Background service worker with message routing
 - ✅ OpenAI, Claude & Gemini translator implementations
+- ✅ **Web Browsing** (Google Search API & DuckDuckGo)
 - ✅ Two-layer caching (LRU memory + persistent storage)
 - ✅ Language detection (offline franc-min + API fallback)
 - ✅ Content script UI (floating icon, mini popup, expand panel)
@@ -72,6 +73,7 @@ smart-translator/
 │   │   │   └── persistentCache.js   # chrome.storage.local
 │   │   ├── services/
 │   │   │   ├── chatService.js       # Chat logic
+│   │   │   ├── webSearchService.js  # Web browsing logic
 │   │   │   └── detectLanguage.js    # franc-min + API
 │   │   └── translator/
 │   │       ├── baseTranslator.js    # Abstract base
@@ -167,12 +169,12 @@ Follow this sequence when building features:
 3. ✅ Styling (enterprise minimal theme)
 4. ✅ Debug mode toggle
 
-## **Phase 5: Polish** ✅ COMPLETE
+## **Phase 5: Polish & Advanced Features** ✅ COMPLETE
 1. ✅ Error handling & logging (logger utility)
 2. ✅ Telemetry (local stats)
 3. ✅ Build & packaging scripts
-4. ✅ Pre-commit hooks (Husky + lint-staged)
-5. ✅ Code formatting (Prettier + ESLint)
+4. ✅ **Web Browsing Integration (Google/DuckDuckGo)**
+5. ✅ Pre-commit hooks (Husky + lint-staged)
 
 ---
 
@@ -213,49 +215,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 ---
 
-## **3.2 Translator Strategy Pattern**
+## **3.2 Web Search Integration**
 
-### Base Interface:
+### Service Pattern:
 ```javascript
-// src/background/translator/baseTranslator.js
-class BaseTranslator {
-  constructor(config) {
-    this.config = config;
-  }
-
-  async translate(text, from, to) {
-    throw new Error('translate() must be implemented');
-  }
-
-  buildSystemPrompt(to) {
-    return `You are a professional ${to} native translator...`;
+// src/background/services/webSearchService.js
+class WebSearchService {
+  async search(query, config) {
+    if (config.provider === 'ddg') {
+      return this.searchDuckDuckGo(query);
+    }
+    return this.searchGoogle(query, config.apiKey, config.cx);
   }
 }
 ```
 
-### Implementation Example:
+### Context Injection:
+The search results are injected into the prompt before sending to the LLM:
 ```javascript
-// src/background/translator/openAITranslator.js
-class OpenAITranslator extends BaseTranslator {
-  async translate(text, from, to) {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`
-      },
-      body: JSON.stringify({
-        model: this.config.model || 'gpt-4',
-        messages: [
-          { role: 'system', content: this.buildSystemPrompt(to) },
-          { role: 'user', content: text }
-        ]
-      })
-    });
-
-    const data = await response.json();
-    return data.choices[0].message.content;
+// src/background/services/chatService.js
+function buildChatPayload(conversation, userMessage, searchResults) {
+  let finalContent = userMessage.content;
+  if (searchResults) {
+    finalContent = `${searchResults}\n\nBased on these results, answer: ${userMessage.content}`;
   }
+  // ...
 }
 ```
 
@@ -438,6 +422,7 @@ Before marking a feature complete, verify:
 - [ ] No console errors in production mode
 - [ ] API keys are never exposed in content scripts
 - [ ] Works with all configured providers (OpenAI, Claude, Custom)
+- [ ] **Web Search works with both Google and DuckDuckGo**
 
 ---
 
@@ -547,6 +532,7 @@ Focus on these for the first working version:
 - Persistent cache
 - Expand mode
 - Telemetry
+- Web Search (Completed v1.0.0)
 
 ---
 
@@ -621,6 +607,7 @@ You will have successfully implemented the Smart Translator when:
 - [x] UI matches DeepL quality and smoothness
 - [x] Options page allows full provider configuration (OpenAI, Claude, Gemini)
 - [x] Chat feature works with streaming and history
+- [x] **Web Browsing (Search) works seamlessly**
 - [x] Side panel is functional
 - [x] Code is modular and well-documented
 - [x] Extension can be built with `make build` and loaded in Chrome

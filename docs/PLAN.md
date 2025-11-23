@@ -7,11 +7,12 @@
 Smart Translator is a Chrome Extension for translating selected text on any webpage.  
 Features:
 
-- OpenAI, Claude, or any custom AI provider (configurable)
+- OpenAI, Claude, Gemini, or any custom AI provider (configurable)
 - Floating icon + DeepL-style mini popup
 - Full popup mode (DeepL-like)
 - Minimal enterprise UI for Popup + Options Page
 - CacheService (TTL + LRU)
+- **Web Browsing (Search) Integration**
 - Optimized architecture, UX, performance, and security
 
 Stack:
@@ -50,10 +51,11 @@ Stack:
   - Output translated text
 
 ## **1.4 Translation Providers**
-Support 2 providers:
+Support 3 main providers:
   - **OpenAI** (default endpoint: `https://api.openai.com/v1/chat/completions`)
   - **Claude** (default endpoint: `https://api.anthropic.com/v1/messages`)
-  - Both support custom endpoints for compatibility with alternative APIs
+  - **Gemini** (Google GenAI SDK)
+  - Custom endpoints supported for compatibility
 - Communication with content script via chrome.runtime.sendMessage
 
 ## **1.5 System Prompt**
@@ -99,58 +101,15 @@ Cache Key:
 {provider}-{model}-{from}-{to}-{hash(originalText)}
 ```
 
-## **1.9 Right Side Panel Translation (Chrome Side Panel API)**
-
-**Overview:**
-- Use Chrome's native Side Panel API (Chrome 114+) for persistent translation UI
-- Panel appears on the right side of browser window
-- Stays open across tabs when pinned
-- No DOM injection needed
-
-**Features:**
-- **Textarea Input**: Large text area for translation input
-- **Multi-language Selection**: Select multiple target languages at once
-- **Batch Translation**: Translate to multiple languages simultaneously
-- **Persistent UI**: Panel state persists across tab switches
-- **Keyboard Shortcut**: Alt+S to toggle side panel
-- **Clean Architecture**: Isolated from webpage DOM
-
-**UI Layout:**
-```
-┌─────────────────────────────┐
-│  Smart Translator (Sidebar) │
-├─────────────────────────────┤
-│ [Textarea: text to translate]│
-│                             │
-├─────────────────────────────┤
-│ Target languages (multi-select) │
-│ ☑ Vietnamese                │
-│ ☑ English                   │
-│ ☐ Japanese                  │
-├─────────────────────────────┤
-│  [Translate]                │
-├─────────────────────────────┤
-│ Results per language        │
-│  📝 Vietnamese              │
-│  Translation result...      │
-│  📝 English                 │
-│  Translation result...      │
-└─────────────────────────────┘
-```
-
-**Architecture:**
-- `src/sidepanel/sidepanel.html` - Side panel UI
-- `src/sidepanel/sidepanel.js` - Panel logic
-- `src/sidepanel/sidepanel.css` - Panel styles
-- Communication: sidepanel.js → background.js → translator → results
-
-**Benefits:**
-- ✅ Persistent across tabs
-- ✅ No DOM pollution
-- ✅ Native Chrome feature
-- ✅ Better UX for long translations
-- ✅ Multi-language comparison
-- ✅ Keyboard shortcut support
+## **1.9 Web Browsing (Search Integration)**
+Allow the AI to access real-time information from the web.
+- **Providers**:
+  - **Google Programmable Search**: High quality, requires API Key + CX.
+  - **DuckDuckGo**: Free, HTML scraping fallback.
+- **Integration**:
+  - Toggle in Chat UI (Globe icon).
+  - Fetches top 5 results.
+  - Injects context into LLM prompt.
 
 ---
 
@@ -173,13 +132,14 @@ Cache Key:
 │   │   │   ├── baseTranslator.js
 │   │   │   ├── openAITranslator.js
 │   │   │   ├── claudeTranslator.js
-│   │   │   └── customTranslator.js
+│   │   │   └── geminiTranslator.js
 │   │   ├── cache/
 │   │   │   ├── memoryCache.js
 │   │   │   └── persistentCache.js
 │   │   ├── services/
 │   │   │   ├── detectLanguage.js
-│   │   │   └── telemetry.js
+│   │   │   ├── chatService.js
+│   │   │   └── webSearchService.js
 │   │   └── backgroundMessageRouter.js
 │   │
 │   ├── content/
@@ -199,6 +159,11 @@ Cache Key:
 │   │   ├── options.html
 │   │   ├── options.js
 │   │   └── options.css
+│   │
+│   ├── chat/
+│   │   ├── chat.html
+│   │   ├── chat.js
+│   │   └── chat.css
 │   │
 │   ├── utils/
 │   │   ├── storage.js
@@ -227,7 +192,8 @@ Cache Key:
   "name": "Smart Translator",
   "version": "1.0.0",
   "description": "Translate selected text using OpenAI, Claude, or Custom providers.",
-  "permissions": ["storage", "activeTab", "scripting"],
+  "permissions": ["storage", "activeTab", "scripting", "sidePanel"],
+  "host_permissions": ["https://www.googleapis.com/*", "https://html.duckduckgo.com/*"],
   "background": {
     "service_worker": "background.js",
     "type": "module"
@@ -237,6 +203,9 @@ Cache Key:
     "default_popup": "popup/popup.html"
   },
   "options_page": "options/options.html",
+  "side_panel": {
+    "default_path": "sidepanel/sidepanel.html"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
@@ -246,9 +215,6 @@ Cache Key:
   ]
 }
 ```
-
-**No host_permissions needed**  
-→ because fetch in background doesn't require special domains.
 
 ---
 
@@ -313,7 +279,11 @@ Enterprise SaaS UI:
 
 ```
 ╔ Provider ═════════╗
-  OpenAI / Claude / Custom
+  OpenAI / Claude / Gemini
+╚═══════════════════╝
+
+╔ Web Search ═══════╗
+  Google / DuckDuckGo
 ╚═══════════════════╝
 
 ╔ API Config ═══════╗
@@ -324,10 +294,6 @@ Enterprise SaaS UI:
 ╔ Defaults ═════════╗
   Languages
   Auto-detect
-╚═══════════════════╝
-
-╔ System Prompt ════╗
-  Editor box
 ╚═══════════════════╝
 ```
 
@@ -354,6 +320,7 @@ Receive messages from content script:
 | `expandMode` | open large UI |
 | `getSettings` | get config |
 | `setSettings` | save config |
+| `chatSend` | send chat message |
 
 ---
 
@@ -363,6 +330,7 @@ Receive messages from content script:
 BaseTranslator
  ├── OpenAITranslator
  ├── ClaudeTranslator
+ ├── GeminiTranslator
  └── CustomTranslator
 ```
 
@@ -421,17 +389,8 @@ zip:
   - content.js
   - options.html
   - popup.html
-
-Define:
-
-```javascript
-rollupOptions:
-  input:
-    background: "src/background/background.js"
-    content: "src/content/content.js"
-    popup: "src/popup/popup.html"
-    options: "src/options/options.html"
-```
+  - chat.html
+  - sidepanel.html
 
 ---
 
@@ -496,104 +455,6 @@ chrome.commands.onCommand.addListener((command) => {
   }
 });
 ```
-
-## **10.3 Side Panel UI Components**
-
-**HTML Structure:**
-- Header with title and close button
-- Large textarea for input (auto-resize)
-- Language selector (checkboxes for multi-select)
-- Translate button
-- Results section with tabs/accordion per language
-- Settings icon to open full options
-
-**Key Features:**
-- Remember last selected languages in storage
-- Show translation progress/loading state
-- Copy button for each translation result
-- Character count indicator
-- Clear input button
-
-## **10.4 Translation Workflow**
-
-```javascript
-// sidepanel.js
-async function translateMulti(text, targetLangs) {
-  const results = {};
-  
-  for (const lang of targetLangs) {
-    const response = await chrome.runtime.sendMessage({
-      type: 'translate',
-      payload: { text, from: 'auto', to: lang }
-    });
-    
-    if (response.success) {
-      results[lang] = response.data;
-    }
-  }
-  
-  return results;
-}
-```
-
-## **10.5 File Structure**
-
-```
-src/
-  sidepanel/
-    sidepanel.html       # Side panel UI
-    sidepanel.js         # Panel logic & translation handling
-    sidepanel.css        # Panel styles
-    components/
-      LanguageSelector.js
-      TranslationResult.js
-```
-
-## **10.6 Integration with Existing Features**
-
-- Share same translator implementations (OpenAI, Claude)
-- Use same cache service for efficiency
-- Reuse language constants from defaults.js
-- Share telemetry/stats tracking
-- Use same storage utilities
-
-## **10.7 Development Phases**
-
-**Phase 1: Setup (30 min)**
-- Add manifest side_panel config
-- Create sidepanel.html boilerplate
-- Register keyboard shortcut
-- Test panel opens/closes
-
-**Phase 2: UI Build (1-2 hours)**
-- Build textarea input
-- Create language multi-selector
-- Style translate button
-- Design results display area
-
-**Phase 3: Translation Logic (1 hour)**
-- Handle form submission
-- Integrate with background translator
-- Display results per language
-- Add loading states
-
-**Phase 4: Polish (1 hour)**
-- Persist selected languages
-- Add copy buttons
-- Character count
-- Error handling
-- Responsive design
-
----
-
-# #️⃣ **11. OPTIONAL FEATURES (PHASE 2)**
-
-- Model auto-selection
-- Speech-to-translate
-- TTS output
-- Sync history across devices
-- Export translations to file
-- Side panel split view (source + target side-by-side)
 
 ---
 

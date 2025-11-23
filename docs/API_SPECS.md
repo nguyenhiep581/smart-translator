@@ -241,17 +241,6 @@ Both OpenAI and Claude translators support custom endpoints:
 }
 ```
 
-**Use Cases:**
-- Azure OpenAI Service
-- LocalAI or other self-hosted OpenAI-compatible APIs
-- Custom Claude-compatible proxies
-- Enterprise API gateways
-
-**Requirements:**
-- Custom endpoints must be API-compatible with respective provider
-- OpenAI custom endpoints must accept OpenAI request/response format
-- Claude custom endpoints must accept Claude request/response format
-
 ---
 
 # #️⃣ **3. Gemini API (Google)**
@@ -281,19 +270,62 @@ const ai = new GoogleGenAI({ apiKey: CONFIG_API_KEY });
 | `gemini-1.5-pro` | Fast | Excellent | 2M |
 | `gemini-1.5-flash` | Extremely Fast | Good | 1M |
 
-## **3.5 Error Handling**
+---
 
-| Error | Description |
-|-------|-------------|
-| `RESOURCE_EXHAUSTED` | Quota exceeded (429) |
-| `PERMISSION_DENIED` | Invalid API key (403) |
-| `INVALID_ARGUMENT` | Malformed request (400) |
+# #️⃣ **4. Web Search APIs**
+
+## **4.1 Google Programmable Search Engine (Custom Search JSON API)**
+
+Used for reliable, high-quality search results with an official API Key.
+
+**Endpoint**:
+```
+GET https://www.googleapis.com/customsearch/v1
+```
+
+**Parameters**:
+- `key`: API Key (from Google Cloud Console)
+- `cx`: Search Engine ID (from Programmable Search Engine)
+- `q`: Search query
+- `num`: Number of results (default: 5)
+
+**Response Format**:
+```json
+{
+  "items": [
+    {
+      "title": "Page Title",
+      "link": "https://example.com",
+      "snippet": "Description of the page content..."
+    }
+  ]
+}
+```
+
+## **4.2 DuckDuckGo HTML Search (Free)**
+
+Used as a fallback or free alternative. Does not require an API key.
+
+**Endpoint**:
+```
+GET https://html.duckduckgo.com/html/?q={QUERY}
+```
+
+**Parsing Logic**:
+- Fetches the HTML response.
+- Uses Regex to extract result blocks (Title, Link, Snippet).
+- Decodes `uddg` redirect links to get the actual URL.
+
+**Limitations**:
+- Rate limiting by IP address.
+- HTML structure changes may break the parser.
+- Less structured than JSON API.
 
 ---
 
-# #️⃣ **4. Language Detection API**
+# #️⃣ **5. Language Detection API**
 
-## **4.1 Offline Detection (Default)**
+## **5.1 Offline Detection (Default)**
 
 Use heuristic library like `franc-min`:
 
@@ -306,7 +338,7 @@ function detectLanguage(text) {
 }
 ```
 
-## **4.2 API-Based Detection (Optional)**
+## **5.2 API-Based Detection (Optional)**
 
 ### OpenAI Language Detection
 
@@ -334,9 +366,9 @@ Response will be simple: `"vi"` or `"en"`, etc.
 
 ---
 
-# #️⃣ **5. Retry Logic**
+# #️⃣ **6. Retry Logic**
 
-## **5.1 Exponential Backoff**
+## **6.1 Exponential Backoff**
 
 ```javascript
 async function fetchWithRetry(url, options, maxRetries = 3) {
@@ -366,7 +398,7 @@ async function fetchWithRetry(url, options, maxRetries = 3) {
 }
 ```
 
-## **5.2 Retry Strategy**
+## **6.2 Retry Strategy**
 
 | Error Type | Retry? | Max Retries | Backoff |
 |-----------|--------|-------------|---------|
@@ -378,7 +410,7 @@ async function fetchWithRetry(url, options, maxRetries = 3) {
 
 ---
 
-# #️⃣ **6. Timeout Configuration**
+# #️⃣ **7. Timeout Configuration**
 
 ```javascript
 const TIMEOUT_MS = 30000; // 30 seconds
@@ -404,9 +436,9 @@ try {
 
 ---
 
-# #️⃣ **7. Response Caching**
+# #️⃣ **8. Response Caching**
 
-## **7.1 Cache Key Generation**
+## **8.1 Cache Key Generation**
 
 ```javascript
 async function generateCacheKey(provider, model, from, to, text) {
@@ -416,7 +448,7 @@ async function generateCacheKey(provider, model, from, to, text) {
 }
 ```
 
-## **7.2 Hash Function**
+## **8.2 Hash Function**
 
 Use Web Crypto API for consistent hashing:
 
@@ -432,9 +464,9 @@ async function hashString(str) {
 
 ---
 
-# #️⃣ **8. Testing API Connections**
+# #️⃣ **9. Testing API Connections**
 
-## **8.1 Health Check**
+## **9.1 Health Check**
 
 ```javascript
 async function testProviderConnection(config) {
@@ -461,7 +493,7 @@ async function testProviderConnection(config) {
 }
 ```
 
-## **8.2 Test Data**
+## **9.2 Test Data**
 
 ```javascript
 const TEST_CASES = [
@@ -473,7 +505,7 @@ const TEST_CASES = [
 
 ---
 
-# #️⃣ **9. Usage Metrics**
+# #️⃣ **10. Usage Metrics**
 
 Track API usage for telemetry:
 
@@ -492,7 +524,7 @@ Store in `chrome.storage.local` for display in Options page.
 
 ---
 
-# #️⃣ **10. Best Practices**
+# #️⃣ **11. Best Practices**
 
 1. ✅ **Always validate API responses** before using
 2. ✅ **Implement proper error handling** for all error types
@@ -507,4 +539,4 @@ Store in `chrome.storage.local` for display in Options page.
 
 ---
 
-**API documentation last updated: November 2024**
+**API documentation last updated: November 2025**

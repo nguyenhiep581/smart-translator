@@ -80,17 +80,47 @@
           <div id="attachment-previews" class="attachments"></div>
           <div class="composer-row">
             <input id="file-input" type="file" accept="image/*" multiple hidden />
-            <button id="attach-btn" class="btn btn-ghost" title="Attach image (max 3)">📎</button>
             <textarea
               id="input"
               class="composer-input"
               placeholder="Type a message..."
               rows="3"
             ></textarea>
-            <button id="send-btn" class="btn btn-primary btn-send">
-              Send
-              <span class="btn-hint">Enter</span>
-            </button>
+            <div class="composer-actions">
+              <div class="composer-tools">
+                <button
+                  id="web-search-btn"
+                  class="btn btn-ghost btn-icon-only"
+                  title="Enable Web Search"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <path
+                      d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+                    ></path>
+                  </svg>
+                </button>
+                <button
+                  id="attach-btn"
+                  class="btn btn-ghost btn-icon-only"
+                  title="Attach image (max 3)"
+                >
+                  📎
+                </button>
+              </div>
+              <button id="send-btn" class="btn btn-primary btn-send">
+                Send
+                <span class="btn-hint">Enter</span>
+              </button>
+            </div>
           </div>
         </footer>
       </main>

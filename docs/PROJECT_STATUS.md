@@ -20,7 +20,7 @@
 
 - **Total Files**: 55+ files
 - **Lines of Code**: ~5,000 lines
-- **JavaScript Files**: 28 files
+- **JavaScript Files**: 29 files
 - **CSS Files**: 5 files
 - **HTML Files**: 3 files
 - **Documentation**: 6 markdown files
@@ -31,8 +31,8 @@
 ```
 Documentation:     6 files
 Configuration:     6 files  
-Source Code:       35 files
-  - Background:    15 files
+Source Code:       36 files
+  - Background:    16 files
   - Utils/Config:  6 files
   - Content:       6 files
   - UI Pages:      8 files (Popup, Options, Chat, Sidepanel)
@@ -50,6 +50,7 @@ Assets:           5 files
 - ✅ Provider factory pattern (OpenAI/Claude/Gemini)
 - ✅ Two-layer caching system (Memory LRU + Persistent)
 - ✅ Language detection (offline + API fallback)
+- ✅ **Web Browsing Service** (Google/DuckDuckGo)
 
 **Files**:
 - `background.js` - Main service worker
@@ -63,6 +64,7 @@ Assets:           5 files
 - `cache/cacheService.js` - Cache coordinator
 - `services/detectLanguage.js` - franc-min + API detection
 - `services/chatService.js` - Chat logic handler
+- `services/webSearchService.js` - Web search handler
 
 #### **2. Configuration & Utilities**
 - ✅ Default settings with provider configs
@@ -99,6 +101,7 @@ Assets:           5 files
 - ✅ Popup page (quick translate, cache stats, settings)
 - ✅ Options page (full settings interface)
   - Provider configuration (OpenAI, Claude, Gemini)
+  - **Web Search configuration** (Google API / DuckDuckGo)
   - Connection testing & Model fetching
   - Language settings
   - Analytics dashboard
@@ -106,6 +109,7 @@ Assets:           5 files
   - Streaming support
   - History & Context awareness
   - Image attachments (drag/drop/paste)
+  - **Web Browsing** (toggle enabled)
   - Code highlighting
 - ✅ Side Panel (Persistent translation)
   - Multi-language support
@@ -241,11 +245,15 @@ You are a professional {targetLang} native translator who needs to fluently tran
    - Model selection (dynamic + presets)
    - Connection testing
 
-2. **Language & Cache**
+2. **Web Search Settings**
+   - Choose between Google API (key required) or DuckDuckGo (Free)
+   - Enable real-time browsing for Chat
+
+3. **Language & Cache**
    - Default target language
    - Cache statistics & clearing
 
-3. **Analytics**
+4. **Analytics**
    - Usage stats tracking
 
 ### **Side Panel**
@@ -282,6 +290,7 @@ You are a professional {targetLang} native translator who needs to fluently tran
 - [ ] Change default language
 - [ ] Adjust cache settings
 - [ ] View analytics
+- [ ] **Test Web Search (DDG/Google)**
 
 #### **Edge Cases** (To Test)
 - [ ] Very long text (near 5000 char limit)

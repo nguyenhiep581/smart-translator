@@ -594,9 +594,8 @@ body {
 }
 
 .composer-row {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 10px;
+  display: flex;
+  gap: 12px;
   align-items: flex-end;
   background: var(--panel);
   border: 2px solid var(--border);
@@ -615,19 +614,60 @@ body {
     var(--shadow);
 }
 
+.composer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.composer-tools {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-icon-only {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon-only svg {
+  width: 20px;
+  height: 20px;
+}
+
 .composer-input {
-  width: 100%;
+  flex: 1;
   padding: 10px 12px;
   border: none;
   background: var(--bg);
   border-radius: var(--radius-sm);
   resize: none;
-  min-height: 48px;
+  min-height: 80px; /* Increased min-height to match the buttons column height approx */
   max-height: 200px;
   font-family: inherit;
   font-size: 15px;
   line-height: 1.6;
   transition: all 0.15s ease;
+}
+
+.composer-row .btn.active {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.composer-row .btn.active svg {
+  stroke: #3b82f6;
+}
+
+/* Remove old selector if present */
+.composer-row .btn.active {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
 }
 
 .composer-input:focus {

@@ -18,6 +18,7 @@ import {
   streamChatMessage,
   ensureSummaryIfNeeded,
 } from './services/chatService.js';
+import { webSearchService } from './services/webSearchService.js';
 
 const cacheService = new CacheService();
 
@@ -426,6 +427,24 @@ async function handleChatStream(port, payload) {
     // Summary if needed
     await ensureSummaryIfNeeded(config, convo, userPayload);
 
+    // Web Search if enabled
+    let searchResults = null;
+    const webConfig = config.webSearch || {};
+
+    // Allow if using DDG (no keys needed) OR Google (with keys)
+    const isDDG = webConfig.provider === 'ddg';
+    const isGoogleReady =
+      (webConfig.provider === 'google' || !webConfig.provider) && webConfig.apiKey && webConfig.cx;
+
+    if (message.webBrowsing && (isDDG || isGoogleReady)) {
+      try {
+        searchResults = await webSearchService.search(message.content, webConfig);
+      } catch (err) {
+        error('Web search error:', err);
+        // Continue without search results
+      }
+    }
+
     let assistantText = '';
     const onChunk = (text, done) => {
       assistantText = text;
@@ -437,7 +456,7 @@ async function handleChatStream(port, payload) {
       });
     };
 
-    await streamChatMessage(config, convo, userPayload, onChunk);
+    await streamChatMessage(config, convo, userPayload, onChunk, searchResults);
 
     convo.messages.push(userPayload);
     convo.messages.push({ role: 'assistant', content: assistantText });

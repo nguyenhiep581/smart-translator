@@ -21,6 +21,23 @@
             </svg>
             Provider Settings
           </button>
+          <button class="nav-item" data-section="websearch">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path
+                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+              ></path>
+            </svg>
+            Web Search
+          </button>
           <button class="nav-item" data-section="language">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path
@@ -211,6 +228,87 @@
                 placeholder="You are a professional translator..."
               ></textarea>
               <div class="form-help">Leave empty to use default prompt</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Web Search Settings Section -->
+        <section class="section" id="websearch-section" style="display: none">
+          <div class="section-header">
+            <h2 class="section-title">Web Search Settings</h2>
+            <button id="save-websearch" class="btn btn-primary">Save Settings</button>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">Search Configuration</h3>
+            <div class="form-group">
+              <label class="form-label">Search Provider</label>
+              <select id="search-provider" class="form-select">
+                <option value="ddg">DuckDuckGo (Free)</option>
+                <option value="google">Google Programmable Search (API Key)</option>
+              </select>
+            </div>
+
+            <div id="google-search-config">
+              <h4
+                class="card-subtitle"
+                style="margin-top: 16px; margin-bottom: 8px; font-size: 14px"
+              >
+                Google Settings
+              </h4>
+              <p class="info-text">
+                To enable real-time web browsing capabilities with Google, you need to configure a
+                Google Programmable Search Engine.
+              </p>
+
+              <div class="form-group">
+                <label class="form-label">Google Custom Search API Key</label>
+                <input
+                  type="password"
+                  id="google-search-api-key"
+                  class="form-input"
+                  placeholder="AIza..."
+                />
+                <div class="form-help">
+                  Get your API key from the
+                  <a href="https://developers.google.com/custom-search/v1/overview" target="_blank"
+                    >Google Cloud Console</a
+                  >.
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Search Engine ID (CX)</label>
+                <input
+                  type="text"
+                  id="google-search-cx"
+                  class="form-input"
+                  placeholder="0123456789..."
+                />
+                <div class="form-help">
+                  Create a search engine at
+                  <a href="https://programmablesearchengine.google.com/" target="_blank"
+                    >Programmable Search Engine</a
+                  >
+                  and get the CX ID.
+                </div>
+              </div>
+            </div>
+
+            <div id="ddg-search-config" style="display: none">
+              <h4
+                class="card-subtitle"
+                style="margin-top: 16px; margin-bottom: 8px; font-size: 14px"
+              >
+                DuckDuckGo Settings
+              </h4>
+              <p class="info-text">
+                DuckDuckGo search is free and requires no API key.
+                <br />
+                <span style="font-size: 12px; color: #666"
+                  >Note: This uses HTML scraping and may be less reliable than the Google API.</span
+                >
+              </p>
             </div>
           </div>
         </section>

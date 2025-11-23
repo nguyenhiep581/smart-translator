@@ -201,24 +201,30 @@ class ChatGemini extends GeminiTranslator {
   }
 }
 
-export async function streamChatMessage(config, conversation, userMessage, onChunk) {
+export async function streamChatMessage(config, conversation, userMessage, onChunk, searchResults) {
   const provider = conversation.provider;
   if (provider === 'gemini') {
-    return streamGemini(config, conversation, userMessage, onChunk);
+    return streamGemini(config, conversation, userMessage, onChunk, searchResults);
   }
   if (provider === 'openai') {
-    return streamOpenAIStyle(config, conversation, userMessage, onChunk);
+    return streamOpenAIStyle(config, conversation, userMessage, onChunk, searchResults);
   }
   if (provider === 'claude') {
-    return streamClaude(config, conversation, userMessage, onChunk);
+    return streamClaude(config, conversation, userMessage, onChunk, searchResults);
   }
   throw new Error(`Streaming not supported for provider: ${provider}`);
 }
 
-function buildChatPayload(conversation, userMessage) {
+function buildChatPayload(conversation, userMessage, searchResults) {
   const history = conversation.messages || [];
   const contextMessages = history.slice(-6);
-  const combined = [...contextMessages, userMessage];
+
+  const finalUserMessage = { ...userMessage };
+  if (searchResults) {
+    finalUserMessage.content = `${searchResults}\n\nBased on the above search results, please answer the following.\n\n${userMessage.content}`;
+  }
+
+  const combined = [...contextMessages, finalUserMessage];
   const systemPrompt = conversation.systemPrompt || '';
 
   const messages = [];
@@ -230,12 +236,12 @@ function buildChatPayload(conversation, userMessage) {
   return { systemPrompt, messages };
 }
 
-async function streamOpenAIStyle(config, conversation, userMessage, onChunk) {
+async function streamOpenAIStyle(config, conversation, userMessage, onChunk, searchResults) {
   const host = config.openai.host || 'https://api.openai.com';
   const path = config.openai.path || '/v1/chat/completions';
   const endpoint = `${host}${path}`;
 
-  const { systemPrompt, messages } = buildChatPayload(conversation, userMessage);
+  const { systemPrompt, messages } = buildChatPayload(conversation, userMessage, searchResults);
   const bodyMessages = messages.map((m) => normalizeOpenAIMessage(m));
   if (systemPrompt) {
     bodyMessages.unshift({ role: 'system', content: systemPrompt });
@@ -303,9 +309,9 @@ async function streamOpenAIStyle(config, conversation, userMessage, onChunk) {
   return fullText.trim();
 }
 
-async function streamGemini(config, conversation, userMessage, onChunk) {
+async function streamGemini(config, conversation, userMessage, onChunk, searchResults) {
   await ensureSummaryIfNeeded(config, conversation, userMessage);
-  const { systemPrompt, messages } = buildChatPayload(conversation, userMessage);
+  const { systemPrompt, messages } = buildChatPayload(conversation, userMessage, searchResults);
 
   const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey });
   const modelName = (conversation.model || config.gemini.model || 'gemini-2.0-flash-exp').replace(
@@ -350,12 +356,12 @@ async function streamGemini(config, conversation, userMessage, onChunk) {
   }
 }
 
-async function streamClaude(config, conversation, userMessage, onChunk) {
+async function streamClaude(config, conversation, userMessage, onChunk, searchResults) {
   const host = config.claude.host || 'https://api.anthropic.com';
   const path = config.claude.path || '/v1/messages';
   const endpoint = `${host}${path}`;
 
-  const { systemPrompt, messages } = buildChatPayload(conversation, userMessage);
+  const { systemPrompt, messages } = buildChatPayload(conversation, userMessage, searchResults);
   const claudeMessages = messages.map((m) => ({
     role: m.role === 'assistant' ? 'assistant' : 'user',
     content: m.content,

@@ -15,6 +15,7 @@ let providerModels = { openai: [], claude: [], gemini: [] };
 let lastPendingMessage = null;
 let promptLibrary = [];
 let portReady = false;
+let webBrowsingEnabled = false;
 
 marked.setOptions({
   gfm: true,
@@ -241,6 +242,31 @@ function bindEvents() {
     document.getElementById('file-input').click();
   });
 
+  document.getElementById('web-search-btn').addEventListener('click', () => {
+    // Check if web search is configured
+    const provider = config.webSearch?.provider || 'ddg';
+    const isGoogle = provider === 'google';
+    const hasGoogleKeys = config.webSearch?.apiKey && config.webSearch?.cx;
+
+    if (isGoogle && !hasGoogleKeys) {
+      alert(
+        'Please configure Google Search API settings in Options first, or switch to DuckDuckGo (Free).',
+      );
+      chrome.runtime.openOptionsPage();
+      return;
+    }
+
+    webBrowsingEnabled = !webBrowsingEnabled;
+    const btn = document.getElementById('web-search-btn');
+    if (webBrowsingEnabled) {
+      btn.classList.add('active');
+      btn.style.color = '#3b82f6'; // distinct active color
+    } else {
+      btn.classList.remove('active');
+      btn.style.color = '';
+    }
+  });
+
   document.getElementById('file-input').addEventListener('change', handleFiles);
   document.getElementById('btn-system-prompt').addEventListener('click', () => openModal());
   document.getElementById('btn-max-tokens').addEventListener('click', () => openModal());
@@ -434,6 +460,7 @@ async function sendMessage() {
   const messagePayload = {
     content: text,
     attachments: attachments.slice(0, 3),
+    webBrowsing: webBrowsingEnabled,
   };
 
   // Build a clean copy for sending (no optimistic messages)

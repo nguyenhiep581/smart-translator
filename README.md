@@ -18,7 +18,7 @@ A high-performance Chrome Extension for AI-powered translation with DeepL-style 
 - ⏱️ **Smart Timeout** - 30-second timeout prevents hanging on slow APIs
 - 📊 **Analytics** - Track usage statistics (local only, no telemetry)
 - 🐛 **Debug Mode** - Toggle detailed console logging
-- 💬 **Chat Mode** - ChatGPT-style chat with history, model selection, up to 3 image attachments, and streaming replies
+- 💬 **Chat Mode** - ChatGPT-style chat with history, model selection, up to 3 image attachments, streaming replies, and **Web Browsing** capabilities
 
 ## 🚀 Quick Start
 
@@ -161,7 +161,10 @@ smart-translator/
    - Optional: Custom endpoint (Azure, LocalAI, etc.)
 3. **Language**:
    - Set default target language
-4. **Cache**:
+4. **Web Search** (Optional):
+   - Configure Google Programmable Search Engine (API Key + CX)
+   - Enables real-time web browsing in Chat Mode
+5. **Cache**:
    - Max memory entries (default: 500)
    - TTL - Time to live (default: 7 days)
 5. **About**:

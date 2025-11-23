@@ -53,6 +53,7 @@
     "48": "icon48.png",
     "128": "icon128.png"
   },
+  "host_permissions": ["https://www.googleapis.com/*", "https://html.duckduckgo.com/*"],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   }
