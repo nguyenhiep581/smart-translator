@@ -31,7 +31,7 @@ export class GeminiTranslator extends BaseTranslator {
 
       // Prepare generation config with strict settings to prevent explanations
       const generationConfig = {
-        temperature: this.config.temperature ?? 0.1, // Lower temperature for more focused output
+        temperature: this.config.temperature ?? 0.3, // Lower temperature for more focused output
         maxOutputTokens: this.config.maxTokens ?? 2048,
         topP: 0.8, // Reduce randomness
         topK: 20, // More focused sampling
