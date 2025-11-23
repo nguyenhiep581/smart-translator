@@ -150,6 +150,24 @@
   gap: 8px;
 }
 
+.st-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--st-border-medium);
+  border-top-color: var(--st-primary);
+  border-radius: 50%;
+  animation: stSpin 800ms linear infinite;
+}
+
+@keyframes stSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .st-error {
   color: #ef4444;
   font-size: 13px;

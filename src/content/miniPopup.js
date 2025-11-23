@@ -59,7 +59,10 @@ export async function showMiniPopup(selection) {
     </div>
     <div class="st-original">${escapeHtml(selection.text)}</div>
     <div class="st-translation">
-      <div class="st-loading">Translating...</div>
+      <div class="st-loading">
+        <span class="st-spinner" aria-hidden="true"></span>
+        <span>Translating...</span>
+      </div>
     </div>
     <div class="st-actions">
       <button class="st-btn st-btn--ghost st-btn-copy" disabled>Copy</button>
@@ -127,6 +130,8 @@ export function hideMiniPopup() {
 async function translateText(selection) {
   const toLang = miniPopup.querySelector('.st-to-lang').value;
   const translationEl = miniPopup.querySelector('.st-translation');
+  currentTranslation = '';
+  miniPopup.querySelectorAll('.st-btn').forEach((btn) => (btn.disabled = true));
 
   // Warn for long text
   const textLength = selection.text.length;
@@ -136,7 +141,15 @@ async function translateText(selection) {
     loadingMsg = `Translating long text (~${estimatedSeconds}s)...`;
   }
 
-  translationEl.innerHTML = `<div class="st-loading">${loadingMsg}</div>`;
+  translationEl.innerHTML = `
+    <div class="st-loading">
+      <span class="st-spinner" aria-hidden="true"></span>
+      <span>${escapeHtml(loadingMsg)}</span>
+    </div>
+    <div class="st-translation-text"></div>
+  `;
+  const textEl = translationEl.querySelector('.st-translation-text');
+  const loadingEl = translationEl.querySelector('.st-loading');
 
   const startTime = performance.now();
 
@@ -147,10 +160,6 @@ async function translateText(selection) {
     let translatedText = '';
     let isComplete = false;
 
-    // Show translation area immediately
-    translationEl.innerHTML = '<div class="st-translation-text"></div>';
-    const textEl = translationEl.querySelector('.st-translation-text');
-
     port.onMessage.addListener((response) => {
       if (response.type === 'chunk') {
         // Append streaming chunk
@@ -160,6 +169,9 @@ async function translateText(selection) {
         isComplete = true;
         currentTranslation = response.data;
         textEl.textContent = response.data;
+        if (loadingEl) {
+          loadingEl.remove();
+        }
 
         const endTime = performance.now();
         const duration = Math.round(endTime - startTime);
