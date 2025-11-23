@@ -363,8 +363,8 @@ make zip
 
 ### **Post-Release**
 
-- [ ] Tag release in GitHub
-- [ ] Create GitHub Release with changelog
+- [ ] Run GitHub Action "Build and Release" manually with new tag
+- [ ] Verify Release creation on GitHub
 - [ ] Update README with new version
 - [ ] Announce on social media/blog (if applicable)
 - [ ] Monitor for bug reports

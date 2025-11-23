@@ -162,8 +162,9 @@ smart-translator/
 3. **Language**:
    - Set default target language
 4. **Web Search** (Optional):
-   - Configure Google Programmable Search Engine (API Key + CX)
-   - Enables real-time web browsing in Chat Mode
+   - Choose **DuckDuckGo (Free)** for no-setup web browsing.
+   - Or configure **Google Programmable Search** (API Key + CX) for higher reliability.
+   - Enables real-time web browsing in Chat Mode (click Globe icon).
 5. **Cache**:
    - Max memory entries (default: 500)
    - TTL - Time to live (default: 7 days)

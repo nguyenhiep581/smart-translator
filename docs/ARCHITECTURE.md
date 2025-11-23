@@ -20,6 +20,7 @@ smart-translator/
 │   │   │   └── persistentCache.js   # chrome.storage.local wrapper
 │   │   ├── services/       # Business logic services
 │   │   │   ├── chatService.js      # Chat feature logic
+│   │   │   ├── webSearchService.js # Web search & browsing
 │   │   │   └── detectLanguage.js   # Language detection
 │   │   └── translator/     # Translation providers
 │   │       ├── baseTranslator.js   # Abstract base class
