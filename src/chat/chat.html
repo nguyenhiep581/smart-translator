@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Smart Translator Chat</title>
     <link rel="stylesheet" href="chat.css" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
-    />
   </head>
   <body>
     <div id="app">
@@ -21,7 +17,34 @@
           <button id="new-chat" class="btn btn-primary btn-sm">New chat</button>
         </header>
         <div class="sidebar-section">
-          <label class="section-label">Model</label>
+          <label class="section-label">Provider</label>
+          <select id="provider-select" class="form-select"></select>
+        </div>
+        <div class="sidebar-section">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 8px;
+            "
+          >
+            <label class="section-label" style="margin-bottom: 0">Model</label>
+            <button id="refresh-models" class="btn-icon" title="Refresh models">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+                />
+              </svg>
+            </button>
+          </div>
           <select id="model-select" class="form-select"></select>
         </div>
         <div class="sidebar-section">

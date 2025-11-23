@@ -190,6 +190,12 @@ body {
   gap: 12px;
 }
 
+.sp-results-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 /* Empty State */
 .sp-empty-state {
   text-align: center;
@@ -236,15 +242,44 @@ body {
   background: white;
   border: 1px solid var(--sp-border);
   border-radius: 8px;
-  padding: 16px;
+  overflow: hidden;
   box-shadow: 0 1px 3px var(--sp-shadow);
+  transition: all 0.2s ease;
+}
+
+.sp-result-card.collapsed .sp-result-body {
+  display: none;
 }
 
 .sp-result-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  padding: 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.sp-result-header:hover {
+  background: rgba(26, 115, 232, 0.04);
+}
+
+.sp-result-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.sp-collapse-icon {
+  font-size: 12px;
+  transition: transform 0.2s;
+  color: var(--sp-text-secondary);
+}
+
+.sp-result-card.collapsed .sp-collapse-icon {
+  transform: rotate(-90deg);
 }
 
 .sp-result-header h4 {
@@ -252,6 +287,10 @@ body {
   font-size: 14px;
   font-weight: 500;
   color: var(--sp-text);
+}
+
+.sp-result-body {
+  padding: 0 16px 16px 16px;
 }
 
 .sp-result-actions {
@@ -264,6 +303,26 @@ body {
   font-size: 11px;
   color: var(--sp-success);
   font-weight: 500;
+}
+
+.sp-streaming-indicator {
+  font-size: 11px;
+  color: var(--sp-primary);
+  font-weight: 500;
+  animation: pulse 1.5s ease-in-out infinite;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .sp-btn-copy {
@@ -288,7 +347,11 @@ body {
   line-height: 1.6;
   color: var(--sp-text);
   white-space: pre-wrap;
-  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.sp-result-streaming {
+  position: relative;
 }
 
 .sp-result-error {

@@ -4,6 +4,7 @@
 
 import { error as logError } from '../utils/logger.js';
 import { getTargetLanguages } from '../config/defaults.js';
+import { loadSettings, saveSettings } from '../utils/storage.js';
 
 // Populate language dropdowns
 function populateLanguageSelects() {
@@ -61,10 +62,9 @@ document.getElementById('open-sidepanel').addEventListener('click', async () => 
 document.getElementById('default-lang').addEventListener('change', async (e) => {
   const newLang = e.target.value;
   try {
-    const result = await chrome.storage.local.get('config');
-    const config = result.config || {};
+    const config = await loadSettings();
     config.defaultTargetLang = newLang;
-    await chrome.storage.local.set({ config });
+    await saveSettings(config);
   } catch (err) {
     logError('Failed to save default language:', err);
   }
@@ -74,25 +74,24 @@ document.getElementById('default-lang').addEventListener('change', async (e) => 
 document.getElementById('ctrl-shortcut').addEventListener('change', async (e) => {
   const enabled = e.target.checked;
   try {
-    const result = await chrome.storage.local.get('config');
-    const config = result.config || {};
+    const config = await loadSettings();
     config.enableCtrlShortcut = enabled;
-    await chrome.storage.local.set({ config });
+    await saveSettings(config);
   } catch (err) {
     logError('Failed to save Ctrl shortcut setting:', err);
   }
 });
 
 // Load settings
-async function loadSettings() {
+async function loadPopupSettings() {
   try {
-    const result = await chrome.storage.local.get('config');
-    const config = result.config || {};
+    const config = await loadSettings();
 
-    // Load provider
+    // Load provider with model
     if (config.provider) {
-      document.getElementById('current-provider').textContent =
-        config.provider.charAt(0).toUpperCase() + config.provider.slice(1);
+      const providerName = config.provider.charAt(0).toUpperCase() + config.provider.slice(1);
+      const model = config[config.provider]?.model || 'Not set';
+      document.getElementById('current-provider').textContent = `${providerName} (${model})`;
     }
 
     // Load default target language
@@ -110,14 +109,23 @@ async function loadSettings() {
 // Load cache status
 async function loadCacheStatus() {
   try {
-    // This would need a new message type to get cache stats
-    document.getElementById('cache-status').textContent = 'Enabled';
+    const response = await chrome.runtime.sendMessage({ type: 'getCacheStats' });
+    if (response.success) {
+      const { memory, persistent } = response.data;
+      const totalEntries = persistent.size || 0;
+      const memoryEntries = memory.size || 0;
+      document.getElementById('cache-status').textContent =
+        `${totalEntries} entries (${memoryEntries} in memory)`;
+    } else {
+      document.getElementById('cache-status').textContent = 'Enabled';
+    }
   } catch (err) {
     logError('Load cache status failed:', err);
+    document.getElementById('cache-status').textContent = 'Enabled';
   }
 }
 
 // Initialize
 populateLanguageSelects();
-loadSettings();
+loadPopupSettings();
 loadCacheStatus();

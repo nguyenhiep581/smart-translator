@@ -1,11 +1,12 @@
 /**
  * Gemini Translator Implementation
  *
- * Uses Google's Generative Language API (Gemini) via generateContent.
+ * Uses Google's Generative Language API (Gemini) via official @google/genai SDK.
  */
 
+import { GoogleGenAI } from '@google/genai';
 import { BaseTranslator } from './baseTranslator.js';
-import { error as logError } from '../../utils/logger.js';
+import { error as logError, debug } from '../../utils/logger.js';
 
 export class GeminiTranslator extends BaseTranslator {
   /**
@@ -13,7 +14,7 @@ export class GeminiTranslator extends BaseTranslator {
    * @param {string} text
    * @param {string} from
    * @param {string} to
-   * @param {Function|null} onStream - not supported for Gemini; ignored
+   * @param {Function|null} onStream - Optional callback for streaming responses
    * @returns {Promise<string>}
    */
   async translate(text, from, to, onStream = null) {
@@ -21,58 +22,139 @@ export class GeminiTranslator extends BaseTranslator {
       throw new Error('Gemini API key not configured');
     }
 
-    const host = this.config.host || 'https://generativelanguage.googleapis.com';
-    const path =
-      this.config.path || '/v1beta/models/gemini-pro:generateContent?key=' + this.config.apiKey;
-    const endpoint = path.startsWith('http') ? path : `${host}${path}`;
-
     try {
+      // Initialize GoogleGenAI client
+      const ai = new GoogleGenAI({ apiKey: this.config.apiKey });
+
+      // Get model name (remove 'models/' prefix if present)
+      const modelName = this.config.model?.replace(/^models\//, '') || 'gemini-2.0-flash-exp';
+
+      // Prepare generation config with strict settings to prevent explanations
+      const generationConfig = {
+        temperature: this.config.temperature ?? 0.1, // Lower temperature for more focused output
+        maxOutputTokens: this.config.maxTokens ?? 2048,
+        topP: 0.8, // Reduce randomness
+        topK: 20, // More focused sampling
+      };
+
+      const systemInstruction = this.buildSystemPrompt(to);
+
+      // Debug logging
+      debug('[Gemini] Translation request:', {
+        model: modelName,
+        from,
+        to,
+        textLength: text.length,
+        textPreview: text.substring(0, 100),
+        config: generationConfig,
+        systemPrompt: systemInstruction,
+      });
+
+      // Set timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-      const response = await fetch(endpoint, {
-        signal: controller.signal,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text }],
+      try {
+        // Use streaming if callback provided
+        if (onStream && typeof onStream === 'function') {
+          const result = await ai.models.generateContentStream({
+            model: modelName,
+            contents: text,
+            config: {
+              ...generationConfig,
+              systemInstruction: [systemInstruction],
             },
-          ],
-          systemInstruction: {
-            role: 'system',
-            parts: [{ text: this.buildSystemPrompt(to) }],
-          },
-          generationConfig: {
-            temperature: this.config.temperature ?? 0.3,
-            maxOutputTokens: this.config.maxTokens ?? 2048,
-          },
-        }),
-      });
+          });
 
-      clearTimeout(timeoutId);
+          let fullText = '';
+          let chunkCount = 0;
+          for await (const chunk of result) {
+            chunkCount++;
+            // Get chunk text - check both .text property and .text() method
+            const chunkText = typeof chunk.text === 'function' ? chunk.text() : chunk.text;
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+            debug(`[Gemini] Chunk ${chunkCount}:`, {
+              chunkText: chunkText?.substring(0, 100),
+            });
+
+            if (chunkText) {
+              fullText += chunkText;
+              onStream(chunkText);
+            }
+          }
+
+          debug('[Gemini] Streaming complete:', {
+            totalChunks: chunkCount,
+            finalLength: fullText.length,
+            preview: fullText.substring(0, 200),
+          });
+
+          clearTimeout(timeoutId);
+          return fullText.trim();
+        } else {
+          // Non-streaming fallback
+          const result = await ai.models.generateContent({
+            model: modelName,
+            contents: text,
+            config: {
+              ...generationConfig,
+              systemInstruction: [systemInstruction],
+            },
+          });
+
+          clearTimeout(timeoutId);
+
+          debug('[Gemini] Non-streaming response:', {
+            hasText: !!result.text,
+            hasCandidates: !!result.candidates,
+          });
+
+          // Get text from result
+          const translatedText = result.text;
+
+          if (!translatedText) {
+            logError('Unexpected Gemini response structure:', result);
+            throw new Error('Invalid response format from Gemini');
+          }
+
+          debug('[Gemini] Translation result:', translatedText.substring(0, 200));
+
+          return translatedText.trim();
+        }
+      } catch (err) {
+        clearTimeout(timeoutId);
+        throw err;
       }
-
-      const data = await response.json();
-      const textPart = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!textPart) {
-        throw new Error('Invalid response format from Gemini');
-      }
-
-      return String(textPart).trim();
     } catch (err) {
       if (err.name === 'AbortError') {
         logError('Gemini API timeout after 30s');
         throw new Error('Translation timeout - Gemini API took too long.');
       }
+
+      // Parse API errors for better user messages
+      const errorMsg = err.message || '';
+
+      if (errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('429')) {
+        logError('Gemini quota exceeded:', err);
+        throw new Error(
+          'Gemini API quota exceeded. Please check your billing at https://ai.google.dev/pricing or wait for quota reset.',
+        );
+      }
+
+      if (errorMsg.includes('PERMISSION_DENIED') || errorMsg.includes('403')) {
+        logError('Gemini API key invalid:', err);
+        throw new Error(
+          "Gemini API key is invalid or doesn't have permission. Check your key at https://aistudio.google.com/app/apikey",
+        );
+      }
+
+      if (errorMsg.includes('INVALID_ARGUMENT') || errorMsg.includes('400')) {
+        logError('Gemini invalid request:', err);
+        throw new Error(
+          'Invalid request to Gemini API. Please check your model name and settings.',
+        );
+      }
+
       logError('Gemini translation error:', err);
       throw new Error(`Gemini API error: ${err.message}`);
     }

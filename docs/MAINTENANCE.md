@@ -16,16 +16,14 @@ This guide helps maintainers keep the Smart Translator codebase healthy, updated
 
 ---
 
-## **🔄 Regular Maintenance Tasks**
-
-### **Weekly**
+### Weekly
 
 - [ ] Check GitHub Issues for bug reports
 - [ ] Review Pull Requests
 - [ ] Monitor Chrome Web Store reviews
-- [ ] Check API provider status (OpenAI, Claude)
+- [ ] Check API provider status (OpenAI, Claude, Gemini)
 
-### **Monthly**
+### Monthly
 
 - [ ] Update dependencies (`pnpm update`)
 - [ ] Review security advisories

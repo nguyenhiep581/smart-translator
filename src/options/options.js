@@ -4,7 +4,7 @@
 
 import { loadSettings, saveSettings } from '../utils/storage.js';
 import { error as logError } from '../utils/logger.js';
-import { DEFAULT_CONFIG, getTargetLanguages } from '../config/defaults.js';
+import { getTargetLanguages } from '../config/defaults.js';
 
 // Populate language dropdown
 function populateLanguageSelect() {
@@ -49,7 +49,7 @@ document.querySelectorAll('.nav-item').forEach((item) => {
 
 // Provider selection
 function hideAllProviderCards() {
-  ['openai', 'claude', 'gemini', 'copilot'].forEach((provider) => {
+  ['openai', 'claude', 'gemini'].forEach((provider) => {
     const el = document.getElementById(`${provider}-config`);
     if (el) {
       el.style.display = 'none';
@@ -75,58 +75,67 @@ document.getElementById('save-provider')?.addEventListener('click', async () => 
     return;
   }
 
-  const config = { provider };
+  // Load existing config and merge with new settings
+  const config = await loadSettings();
+  config.provider = provider;
 
-  if (provider === 'openai') {
-    const modelSelect = document.getElementById('openai-model');
-    const availableModels = Array.from(modelSelect.options).map((opt) => opt.value);
+  // Save OpenAI settings from form if API key is present
+  const openaiApiKey = document.getElementById('openai-api-key').value.trim();
+  if (openaiApiKey) {
+    const openaiModelSelect = document.getElementById('openai-model');
+    const openaiModels = Array.from(openaiModelSelect.options).map((opt) => opt.value);
 
     config.openai = {
-      apiKey: document.getElementById('openai-api-key').value,
+      ...(config.openai || {}),
+      apiKey: openaiApiKey,
       model: document.getElementById('openai-model').value,
       host: document.getElementById('openai-host').value || 'https://api.openai.com',
       path: document.getElementById('openai-path').value || '/v1/chat/completions',
-      availableModels: availableModels,
+      availableModels:
+        openaiModels.length > 0 ? openaiModels : config.openai?.availableModels || [],
     };
-  } else if (provider === 'claude') {
-    const modelSelect = document.getElementById('claude-model');
-    const availableModels = Array.from(modelSelect.options).map((opt) => opt.value);
+  }
+  // Keep existing OpenAI config if field is empty (happens when on different tab)
+
+  // Save Claude settings from form if API key is present
+  const claudeApiKey = document.getElementById('claude-api-key').value.trim();
+  if (claudeApiKey) {
+    const claudeModelSelect = document.getElementById('claude-model');
+    const claudeModels = Array.from(claudeModelSelect.options).map((opt) => opt.value);
 
     config.claude = {
-      apiKey: document.getElementById('claude-api-key').value,
+      ...(config.claude || {}),
+      apiKey: claudeApiKey,
       model: document.getElementById('claude-model').value,
       host: document.getElementById('claude-host').value || 'https://api.anthropic.com',
       path: document.getElementById('claude-path').value || '/v1/messages',
-      availableModels: availableModels,
-    };
-  } else if (provider === 'gemini') {
-    config.gemini = {
-      apiKey: document.getElementById('gemini-api-key').value,
-      model: document.getElementById('gemini-model').value || 'gemini-pro',
-      host:
-        document.getElementById('gemini-host').value || 'https://generativelanguage.googleapis.com',
-      path:
-        document.getElementById('gemini-path').value || '/v1beta/models/gemini-pro:generateContent',
-      availableModels: [],
-    };
-  } else if (provider === 'copilot') {
-    config.copilot = {
-      apiKey: document.getElementById('copilot-api-key').value,
-      model: document.getElementById('copilot-model').value || 'gpt-4o-mini',
-      host: document.getElementById('copilot-host').value || 'https://api.githubcopilot.com',
-      path: document.getElementById('copilot-path').value || '/chat/completions',
-      availableModels: [],
+      availableModels:
+        claudeModels.length > 0 ? claudeModels : config.claude?.availableModels || [],
     };
   }
+  // Keep existing Claude config if field is empty (happens when on different tab)
 
-  const systemPrompt = document.getElementById('system-prompt').value.trim();
-  if (systemPrompt) {
-    config.systemPrompt = systemPrompt;
+  // Save Gemini settings from form if API key is present
+  const geminiApiKey = document.getElementById('gemini-api-key').value.trim();
+  if (geminiApiKey) {
+    const geminiModelSelect = document.getElementById('gemini-model');
+    const geminiModels = Array.from(geminiModelSelect.options).map((opt) => opt.value);
+
+    config.gemini = {
+      ...(config.gemini || {}),
+      apiKey: geminiApiKey,
+      model: document.getElementById('gemini-model').value || 'gemini-2.0-flash-exp',
+      availableModels:
+        geminiModels.length > 0 ? geminiModels : config.gemini?.availableModels || [],
+    };
   }
+  // Keep existing Gemini config if field is empty (happens when on different tab)
 
   try {
     await saveSettings(config);
     showNotification('Settings saved successfully', 'success');
+    // Reload UI to refresh all fields from saved config
+    await loadSettingsUI();
   } catch (err) {
     showNotification('Failed to save settings: ' + err.message, 'error');
   }
@@ -140,6 +149,11 @@ document.getElementById('openai-test-connection')?.addEventListener('click', asy
 // Test Claude connection
 document.getElementById('claude-test-connection')?.addEventListener('click', async () => {
   await testProviderConnection('claude', 'claude-test-connection');
+});
+
+// Test Gemini connection
+document.getElementById('gemini-test-connection')?.addEventListener('click', async () => {
+  await testProviderConnection('gemini', 'gemini-test-connection');
 });
 
 // Get OpenAI models
@@ -157,11 +171,6 @@ document.getElementById('gemini-get-models')?.addEventListener('click', async ()
   await getAvailableModels('gemini', 'gemini-get-models');
 });
 
-// Get Copilot models
-document.getElementById('copilot-get-models')?.addEventListener('click', async () => {
-  await getAvailableModels('copilot', 'copilot-get-models');
-});
-
 // Helper function to test provider connection
 async function testProviderConnection(provider, buttonId) {
   const btn = document.getElementById(buttonId);
@@ -171,8 +180,6 @@ async function testProviderConnection(provider, buttonId) {
 
   try {
     const apiKey = document.getElementById(`${provider}-api-key`).value;
-    const host = document.getElementById(`${provider}-host`)?.value || '';
-    const path = document.getElementById(`${provider}-path`)?.value || '';
     const model = document.getElementById(`${provider}-model`).value;
 
     if (!apiKey) {
@@ -180,20 +187,25 @@ async function testProviderConnection(provider, buttonId) {
       return;
     }
 
-    // Test with a simple translation
-    const defaultHost =
-      provider === 'openai' ? 'https://api.openai.com' : 'https://api.anthropic.com';
-    const defaultPath = provider === 'openai' ? '/v1/chat/completions' : '/v1/messages';
+    // Build config based on provider
+    const config = { provider };
 
-    const config = {
-      provider,
-      [provider]: {
+    if (provider === 'gemini') {
+      config.gemini = { apiKey, model };
+    } else {
+      const host = document.getElementById(`${provider}-host`)?.value || '';
+      const path = document.getElementById(`${provider}-path`)?.value || '';
+      const defaultHost =
+        provider === 'openai' ? 'https://api.openai.com' : 'https://api.anthropic.com';
+      const defaultPath = provider === 'openai' ? '/v1/chat/completions' : '/v1/messages';
+
+      config[provider] = {
         apiKey,
         host: host || defaultHost,
         path: path || defaultPath,
         model,
-      },
-    };
+      };
+    }
 
     // Save temp config and test
     await saveSettings(config);
@@ -225,28 +237,9 @@ async function getAvailableModels(provider, buttonId) {
 
   try {
     const apiKey = document.getElementById(`${provider}-api-key`).value;
-    const host = document.getElementById(`${provider}-host`)?.value;
 
     if (!apiKey) {
       showNotification('Please enter API key first', 'error');
-      return;
-    }
-
-    let modelsEndpoint;
-    let headers;
-
-    if (provider === 'openai') {
-      const apiHost = host || 'https://api.openai.com';
-      modelsEndpoint = `${apiHost}/v1/models`;
-      headers = {
-        Authorization: `Bearer ${apiKey}`,
-      };
-    } else if (provider === 'claude') {
-      // Claude doesn't have a models endpoint, show predefined list
-      showNotification(
-        'Claude models:\n• claude-haiku-4-5-20251001\n• claude-3-opus-20240229\n• claude-3-sonnet-20240229\n• claude-3-haiku-20240307',
-        'success',
-      );
       return;
     }
 
@@ -281,26 +274,22 @@ async function getAvailableModels(provider, buttonId) {
       updateModelSelect('claude-model', models, 'claude');
       showNotification('Claude models preset loaded', 'success');
     } else if (provider === 'gemini') {
-      const host =
-        document.getElementById('gemini-host').value || 'https://generativelanguage.googleapis.com';
       const apiKey = document.getElementById('gemini-api-key').value;
       if (!apiKey) {
         showNotification('Enter Gemini API key first', 'error');
         return;
       }
-      const url = `${host.replace(/\/$/, '')}/v1beta/models?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       const data = await response.json();
-      models = (data.models || []).map((m) => m.name || '').filter(Boolean);
+      models = (data.models || [])
+        .map((m) => (m.name || '').replace(/^models\//, ''))
+        .filter(Boolean);
       updateModelSelect('gemini-model', models, 'gemini');
       showNotification(`Gemini models: ${models.slice(0, 6).join(', ')}`, 'success');
-    } else if (provider === 'copilot') {
-      models = ['gpt-4o-mini', 'gpt-4o'];
-      updateModelSelect('copilot-model', models, 'copilot');
-      showNotification('Copilot models preset loaded', 'success');
     }
   } catch (err) {
     showNotification(`❌ Failed to fetch models: ${err.message}`, 'error');
@@ -413,52 +402,61 @@ async function loadSettingsUI() {
       document.getElementById('provider-select').value = settings.provider;
       hideAllProviderCards();
       document.getElementById(`${settings.provider}-config`).style.display = 'block';
+    }
 
-      if (settings.provider === 'openai' && settings.openai) {
-        document.getElementById('openai-api-key').value = settings.openai.apiKey || '';
-        document.getElementById('openai-host').value = settings.openai.host || '';
-        document.getElementById('openai-path').value = settings.openai.path || '';
+    // Load OpenAI settings (always load, even if not active provider)
+    if (settings.openai) {
+      document.getElementById('openai-api-key').value = settings.openai.apiKey || '';
+      document.getElementById('openai-host').value = settings.openai.host || '';
+      document.getElementById('openai-path').value = settings.openai.path || '';
 
-        // Restore available models list
-        const openaiModelSelect = document.getElementById('openai-model');
-        if (settings.openai.availableModels && settings.openai.availableModels.length > 0) {
-          openaiModelSelect.innerHTML = '';
-          settings.openai.availableModels.forEach((modelId) => {
-            const option = document.createElement('option');
-            option.value = modelId;
-            option.textContent = modelId;
-            openaiModelSelect.appendChild(option);
-          });
-        }
-        openaiModelSelect.value = settings.openai.model || 'gpt-5-mini';
-      } else if (settings.provider === 'claude' && settings.claude) {
-        document.getElementById('claude-api-key').value = settings.claude.apiKey || '';
-        document.getElementById('claude-host').value = settings.claude.host || '';
-        document.getElementById('claude-path').value = settings.claude.path || '';
-
-        // Restore available models list
-        const claudeModelSelect = document.getElementById('claude-model');
-        if (settings.claude.availableModels && settings.claude.availableModels.length > 0) {
-          claudeModelSelect.innerHTML = '';
-          settings.claude.availableModels.forEach((modelId) => {
-            const option = document.createElement('option');
-            option.value = modelId;
-            option.textContent = modelId;
-            claudeModelSelect.appendChild(option);
-          });
-        }
-        claudeModelSelect.value = settings.claude.model || 'claude-haiku-4-5-20251001';
-      } else if (settings.provider === 'gemini' && settings.gemini) {
-        document.getElementById('gemini-api-key').value = settings.gemini.apiKey || '';
-        document.getElementById('gemini-host').value = settings.gemini.host || '';
-        document.getElementById('gemini-path').value = settings.gemini.path || '';
-        document.getElementById('gemini-model').value = settings.gemini.model || 'gemini-pro';
-      } else if (settings.provider === 'copilot' && settings.copilot) {
-        document.getElementById('copilot-api-key').value = settings.copilot.apiKey || '';
-        document.getElementById('copilot-host').value = settings.copilot.host || '';
-        document.getElementById('copilot-path').value = settings.copilot.path || '';
-        document.getElementById('copilot-model').value = settings.copilot.model || 'gpt-4o-mini';
+      const openaiModelSelect = document.getElementById('openai-model');
+      if (settings.openai.availableModels && settings.openai.availableModels.length > 0) {
+        openaiModelSelect.innerHTML = '';
+        settings.openai.availableModels.forEach((modelId) => {
+          const option = document.createElement('option');
+          option.value = modelId;
+          option.textContent = modelId;
+          openaiModelSelect.appendChild(option);
+        });
       }
+      openaiModelSelect.value = settings.openai.model || 'gpt-4o-mini';
+    }
+
+    // Load Claude settings (always load, even if not active provider)
+    if (settings.claude) {
+      document.getElementById('claude-api-key').value = settings.claude.apiKey || '';
+      document.getElementById('claude-host').value = settings.claude.host || '';
+      document.getElementById('claude-path').value = settings.claude.path || '';
+
+      const claudeModelSelect = document.getElementById('claude-model');
+      if (settings.claude.availableModels && settings.claude.availableModels.length > 0) {
+        claudeModelSelect.innerHTML = '';
+        settings.claude.availableModels.forEach((modelId) => {
+          const option = document.createElement('option');
+          option.value = modelId;
+          option.textContent = modelId;
+          claudeModelSelect.appendChild(option);
+        });
+      }
+      claudeModelSelect.value = settings.claude.model || 'claude-haiku-4-5-20251001';
+    }
+
+    // Load Gemini settings (always load, even if not active provider)
+    if (settings.gemini) {
+      document.getElementById('gemini-api-key').value = settings.gemini.apiKey || '';
+
+      const geminiModelSelect = document.getElementById('gemini-model');
+      if (settings.gemini.availableModels && settings.gemini.availableModels.length > 0) {
+        geminiModelSelect.innerHTML = '';
+        settings.gemini.availableModels.forEach((modelId) => {
+          const option = document.createElement('option');
+          option.value = modelId;
+          option.textContent = modelId;
+          geminiModelSelect.appendChild(option);
+        });
+      }
+      geminiModelSelect.value = settings.gemini.model || 'gemini-2.0-flash-exp';
     }
 
     // System prompt

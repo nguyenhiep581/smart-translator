@@ -1,6 +1,9 @@
 import { error as logError, debug } from '../utils/logger.js';
 import hljs from 'highlight.js/lib/common';
 import { marked } from 'marked';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
+import 'highlight.js/styles/github-dark.css';
 
 let conversations = [];
 let currentConversation = null;
@@ -8,11 +11,33 @@ let attachments = [];
 let config = null;
 let streamPort = null;
 let streamingConversationId = null;
-let providerModels = { openai: [], claude: [], gemini: [], copilot: [] };
+let providerModels = { openai: [], claude: [], gemini: [] };
 let lastPendingMessage = null;
 let promptLibrary = [];
 let portReady = false;
 
+marked.setOptions({
+  gfm: true,
+  breaks: true,
+  langPrefix: 'language-',
+  highlight(code, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
+      } catch (err) {
+        logError('Highlight error:', err);
+      }
+    }
+    try {
+      return hljs.highlightAuto(code).value;
+    } catch (err) {
+      logError('Auto-highlight error:', err);
+      return code;
+    }
+  },
+});
+
+const providerSelect = () => document.getElementById('provider-select');
 const modelSelect = () => document.getElementById('model-select');
 const modalEl = () => document.getElementById('settings-modal');
 const modalSystemPrompt = () => document.getElementById('modal-system-prompt');
@@ -26,6 +51,7 @@ async function init() {
   await loadConfig();
   await loadConversations();
   connectStreamPort();
+  populateProviderSelect();
   populateModelSelect(config.provider || 'openai', getDefaultModel(config.provider || 'openai'));
   bindEvents();
   renderConversations();
@@ -34,6 +60,19 @@ async function init() {
   } else {
     setActiveConversation(conversations[0].id);
   }
+
+  // Listen for config changes from options page
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local' && changes.config) {
+      loadConfig().then(() => {
+        // Update provider and model selects
+        populateProviderSelect();
+        const provider = config.provider || 'openai';
+        const model = currentConversation?.model || getDefaultModel(provider);
+        populateModelSelect(provider, model);
+      });
+    }
+  });
 }
 
 function connectStreamPort() {
@@ -66,19 +105,72 @@ async function loadConfig() {
   const res = await chrome.storage.local.get(['config', 'chatPrompts']);
   config = res.config || {};
   promptLibrary = res.chatPrompts || [];
+
   providerModels = {
     openai: config.openai?.availableModels || [],
     claude: config.claude?.availableModels || [],
     gemini: config.gemini?.availableModels || [],
-    copilot: config.copilot?.availableModels || [],
   };
+
   // Pick defaults if model present in config but not in available list
-  ['openai', 'claude', 'gemini', 'copilot'].forEach((p) => {
+  ['openai', 'claude', 'gemini'].forEach((p) => {
     const model = config[p]?.model;
     if (model && !providerModels[p].includes(model)) {
       providerModels[p].unshift(model);
     }
   });
+
+  // Ensure saved chat model stays available in the list for the active provider
+  if (config.chatModel) {
+    const activeProvider = config.provider || 'openai';
+    if (!providerModels[activeProvider].includes(config.chatModel)) {
+      providerModels[activeProvider].unshift(config.chatModel);
+    }
+  }
+}
+
+async function refreshModels() {
+  const btn = document.getElementById('refresh-models');
+  const icon = btn.querySelector('svg');
+
+  // Disable button and show loading state
+  btn.disabled = true;
+  icon.style.animation = 'spin 1s linear infinite';
+
+  try {
+    // Request models from background
+    const response = await chrome.runtime.sendMessage({
+      type: 'getAvailableModels',
+      payload: {
+        provider: config.provider || 'openai',
+      },
+    });
+
+    if (response.success && response.models) {
+      // Update config with new models
+      const provider = config.provider || 'openai';
+      providerModels[provider] = response.models;
+
+      // Update config in storage
+      if (!config[provider]) {
+        config[provider] = {};
+      }
+      config[provider].availableModels = response.models;
+      await chrome.storage.local.set({ config });
+
+      // Refresh the model selector
+      const currentModel = modelSelect().value;
+      populateModelSelect(provider, currentModel);
+
+      debug('Models refreshed successfully:', response.models);
+    }
+  } catch (err) {
+    logError('Failed to refresh models:', err);
+  } finally {
+    // Re-enable button and stop animation
+    btn.disabled = false;
+    icon.style.animation = '';
+  }
 }
 
 async function loadConversations() {
@@ -95,7 +187,10 @@ async function loadConversations() {
 async function createNewConversation() {
   try {
     const provider = config.provider || 'openai';
-    const model = getDefaultModel(provider);
+    const model =
+      config.chatModel && providerModels[provider]?.includes(config.chatModel)
+        ? config.chatModel
+        : getDefaultModel(provider);
     const res = await chrome.runtime.sendMessage({
       type: 'chatCreate',
       payload: {
@@ -121,6 +216,18 @@ function bindEvents() {
   });
   document.getElementById('search-convo').addEventListener('input', renderConversations);
 
+  providerSelect().addEventListener('change', async (e) => {
+    const newProvider = e.target.value;
+    config.provider = newProvider;
+    await chrome.storage.local.set({ config });
+    populateModelSelect(newProvider, getDefaultModel(newProvider));
+    if (currentConversation) {
+      currentConversation.provider = newProvider;
+      currentConversation.model = getDefaultModel(newProvider);
+      await persistConversation();
+    }
+  });
+
   document.getElementById('send-btn').addEventListener('click', sendMessage);
   inputEl().addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -138,6 +245,7 @@ function bindEvents() {
   document.getElementById('btn-system-prompt').addEventListener('click', () => openModal());
   document.getElementById('btn-max-tokens').addEventListener('click', () => openModal());
   document.getElementById('btn-prompts').addEventListener('click', openPromptsModal);
+  document.getElementById('refresh-models').addEventListener('click', refreshModels);
   document.getElementById('close-modal').addEventListener('click', closeModal);
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
   document.getElementById('modal-save').addEventListener('click', saveModalSettings);
@@ -155,8 +263,14 @@ function bindEvents() {
     if (!currentConversation) {
       return;
     }
-    currentConversation.model = modelSelect().value;
+    const selected = modelSelect().value;
+    currentConversation.model = selected;
     await persistConversation();
+    // Persist preferred chat model for future sessions/new chats
+    const nextConfig = { ...(config || {}) };
+    nextConfig.chatModel = selected;
+    config = nextConfig;
+    await chrome.storage.local.set({ config: nextConfig });
   });
 }
 
@@ -198,6 +312,28 @@ function renderConversations() {
   });
 }
 
+function updateLastMessage(content) {
+  const messages = messagesEl();
+  const lastMsgRow = messages.querySelector('.msg:last-child');
+  const lastMsg = lastMsgRow?.querySelector('.bubble');
+  const roleIcon = lastMsgRow?.querySelector('.role');
+
+  if (lastMsg) {
+    // During streaming: show plain text only (no markdown rendering)
+    // Use textContent for instant, flicker-free updates
+    lastMsg.textContent = content || '';
+    lastMsg.style.whiteSpace = 'pre-wrap';
+
+    // Update icon: if content exists, show 🤖, otherwise keep loading spinner
+    if (roleIcon && content && content.trim()) {
+      roleIcon.innerHTML = '🤖';
+    }
+
+    // Auto-scroll to bottom
+    messages.scrollTop = messages.scrollHeight;
+  }
+}
+
 function renderMessages() {
   messagesEl().innerHTML = '';
   if (!currentConversation || !currentConversation.messages?.length) {
@@ -209,25 +345,16 @@ function renderMessages() {
     const row = document.createElement('div');
     row.className = `msg ${m.role}`;
     const rendered = renderMarkdown(m.content || '');
+    const isEmpty = !m.content || m.content.trim() === '';
+
+    // Always show 🤖 for assistant, 🧑 for user (no loading spinner)
     const badge = m.role === 'assistant' ? '🤖' : '🧑';
+
     row.innerHTML = `
       <div class="role" title="${m.role}">${badge}</div>
-      <div class="bubble markdown-body">${rendered}<div class="msg-actions"><button class="icon-btn quote-btn" title="Quote">❝</button><button class="icon-btn copy-msg-btn" title="Copy message">📋</button></div></div>
+      <div class="bubble markdown-body">${rendered || (isEmpty ? '<div class="loading-dots">Thinking...</div>' : '')}</div>
     `;
     messagesEl().appendChild(row);
-
-    row.querySelector('.quote-btn').addEventListener('click', () => {
-      const quoted = `> ${m.content.replace(/\n/g, '\n> ')}\n\n`;
-      inputEl().value = inputEl().value + quoted;
-      inputEl().focus();
-    });
-    row.querySelector('.copy-msg-btn').addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(m.content || '');
-      } catch (err) {
-        logError('Copy message failed', err);
-      }
-    });
   });
   messagesEl().scrollTop = messagesEl().scrollHeight;
 
@@ -256,7 +383,9 @@ function setActiveConversation(id) {
 
   populateModelSelect(
     currentConversation.provider || config.provider || 'openai',
-    currentConversation.model || getDefaultModel(currentConversation.provider || config.provider),
+    currentConversation.model ||
+      config.chatModel ||
+      getDefaultModel(currentConversation.provider || config.provider),
   );
   modalSystemPrompt().value = currentConversation.systemPrompt || '';
   modalMaxTokens().value = currentConversation.maxTokens || 10000;
@@ -436,9 +565,7 @@ function getDefaultModel(provider) {
     case 'claude':
       return 'claude-haiku-4-5-20251001';
     case 'gemini':
-      return 'gemini-pro';
-    case 'copilot':
-      return 'gpt-4o-mini';
+      return 'gemini-2.5-flash';
     case 'openai':
     default:
       return 'gpt-4o-mini';
@@ -447,12 +574,59 @@ function getDefaultModel(provider) {
 
 function escapeHtml(text) {
   const div = document.createElement('div');
-  div.textContent = text || '';
+  div.textContent = text;
   return div.innerHTML;
 }
 
-function escapeHtmlAttr(text) {
-  return (text || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function populateProviderSelect() {
+  const select = providerSelect();
+  select.innerHTML = '';
+
+  const providerNames = {
+    openai: 'OpenAI',
+    claude: 'Claude',
+    gemini: 'Gemini',
+  };
+
+  // Only show providers that have API keys configured
+  const availableProviders = [];
+  if (config.openai?.apiKey) {
+    availableProviders.push('openai');
+  }
+  if (config.claude?.apiKey) {
+    availableProviders.push('claude');
+  }
+  if (config.gemini?.apiKey) {
+    availableProviders.push('gemini');
+  }
+
+  // If no providers configured, show all with a disabled state
+  if (availableProviders.length === 0) {
+    availableProviders.push('openai', 'claude', 'gemini');
+  }
+
+  availableProviders.forEach((provider) => {
+    const opt = document.createElement('option');
+    opt.value = provider;
+    opt.textContent = providerNames[provider];
+    if (!config[provider]?.apiKey) {
+      opt.textContent += ' (No API key)';
+      opt.disabled = true;
+    }
+    select.appendChild(opt);
+  });
+
+  // Set current provider
+  const currentProvider = config.provider || 'openai';
+  if (availableProviders.includes(currentProvider) && config[currentProvider]?.apiKey) {
+    select.value = currentProvider;
+  } else {
+    // Fallback to first available provider
+    const firstAvailable = availableProviders.find((p) => config[p]?.apiKey);
+    if (firstAvailable) {
+      select.value = firstAvailable;
+    }
+  }
 }
 
 function populateModelSelect(provider, selected) {
@@ -461,19 +635,27 @@ function populateModelSelect(provider, selected) {
     claude: providerModels.claude.length
       ? providerModels.claude
       : ['claude-haiku-4-5-20251001', 'claude-3-sonnet-20240229'],
-    gemini: providerModels.gemini.length ? providerModels.gemini : ['gemini-pro'],
-    copilot: providerModels.copilot.length ? providerModels.copilot : ['gpt-4o-mini', 'gpt-4o'],
+    gemini: providerModels.gemini.length ? providerModels.gemini : ['gemini-2.5-flash'],
   };
+
+  const models = options[provider] || [];
+
   const select = modelSelect();
   select.innerHTML = '';
-  (options[provider] || [selected || '']).forEach((m) => {
+
+  models.forEach((m) => {
     const opt = document.createElement('option');
     opt.value = m;
     opt.textContent = m;
     select.appendChild(opt);
   });
-  if (selected) {
+
+  // Only use selected if it's in the provider's model list
+  if (selected && models.includes(selected)) {
     select.value = selected;
+  } else if (models.length > 0) {
+    // Fallback to first model in the list
+    select.value = models[0];
   }
 }
 
@@ -489,10 +671,11 @@ function handleStreamMessage(msg) {
     const last = msgs[msgs.length - 1];
     if (last && last.role === 'assistant') {
       last.content = msg.content || '';
-      renderMessages();
+      updateLastMessage(msg.content || '');
     }
   } else if (msg.type === 'chatStreamDone') {
     streamingConversationId = null;
+
     const convo = msg.conversation;
     const idx = conversations.findIndex((c) => c.id === convo.id);
     if (idx >= 0) {
@@ -501,8 +684,32 @@ function handleStreamMessage(msg) {
       conversations.unshift(convo);
     }
     currentConversation = convo;
-    renderConversations();
-    renderMessages();
+
+    // Now render final markdown for the last message
+    const messages = messagesEl();
+    const lastMsg = messages.querySelector('.msg:last-child .bubble');
+    if (lastMsg && convo.messages?.length) {
+      const lastContent = convo.messages[convo.messages.length - 1].content;
+      const rendered = renderMarkdown(lastContent || '');
+      lastMsg.innerHTML = rendered;
+      lastMsg.style.whiteSpace = '';
+
+      // Re-attach copy handlers
+      lastMsg.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          const code = e.target.dataset.code || '';
+          try {
+            await navigator.clipboard.writeText(code);
+            e.target.textContent = 'Copied';
+            setTimeout(() => (e.target.textContent = 'Copy'), 1500);
+          } catch (err) {
+            logError('Copy failed', err);
+          }
+        });
+      });
+    }
+
+    renderConversations(); // Only update conversation list
     renderError(null);
   } else if (msg.type === 'chatStreamError') {
     streamingConversationId = null;
@@ -663,41 +870,86 @@ function updateSettingsButtons() {
 init().catch((err) => {
   logError('Chat init failed', err);
 });
+const MATH_PLACEHOLDER = '__MATH_BLOCK_';
+
+function normalizeCodeFences(text) {
+  if (!text || !text.includes('```')) {
+    return text;
+  }
+  const fenceCount = (text.match(/```/g) || []).length;
+  if (fenceCount % 2 !== 0) {
+    return `${text}\n\`\`\`\n`;
+  }
+  return text;
+}
+
+function protectMath(text) {
+  const mathBlocks = [];
+  let idx = 0;
+  const replaced = text.replace(/\$\$([\s\S]+?)\$\$|\$([^\n]+?)\$/g, (match, block, inline) => {
+    const content = block || inline;
+    const placeholder = `${MATH_PLACEHOLDER}${idx}__`;
+    mathBlocks.push({ placeholder, content, display: Boolean(block) });
+    idx += 1;
+    return placeholder;
+  });
+  return { replaced, mathBlocks };
+}
+
+function renderMath(content, display) {
+  try {
+    return katex.renderToString(content, {
+      displayMode: display,
+      throwOnError: false,
+    });
+  } catch (err) {
+    logError('KaTeX render failed', err);
+    return content;
+  }
+}
+
 function renderMarkdown(text) {
   if (!text) {
     return '';
   }
-  marked.setOptions({
-    gfm: true,
-    breaks: true,
-    highlight(code, lang) {
-      if (lang && hljs.getLanguage(lang)) {
-        return hljs.highlight(code, { language: lang }).value;
-      }
-      return hljs.highlightAuto(code).value;
-    },
+  const normalized = normalizeCodeFences(text);
+  const { replaced, mathBlocks } = protectMath(normalized);
+  const parsed = marked.parse(replaced);
+
+  let restored = parsed;
+  mathBlocks.forEach(({ placeholder, content, display }) => {
+    const html = renderMath(content, display);
+    restored = restored.replaceAll(placeholder, html);
   });
 
-  const html = marked.parse(text);
-  // add copy buttons to code blocks
   const temp = document.createElement('div');
-  temp.innerHTML = html;
+  temp.innerHTML = restored;
+
   temp.querySelectorAll('pre code').forEach((codeEl) => {
+    // Code is already highlighted by marked, just add hljs class for styling
+    if (!codeEl.classList.contains('hljs')) {
+      codeEl.classList.add('hljs');
+    }
+
     const wrapper = document.createElement('div');
     wrapper.className = 'code-block';
     const pre = codeEl.parentElement;
-    pre.parentElement.insertBefore(wrapper, pre);
-    wrapper.appendChild(pre);
+    if (pre && pre.parentElement) {
+      pre.parentElement.insertBefore(wrapper, pre);
+      wrapper.appendChild(pre);
 
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'copy-btn';
-    copyBtn.textContent = 'Copy';
-    copyBtn.dataset.code = codeEl.textContent || '';
-    wrapper.appendChild(copyBtn);
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'copy-btn';
+      copyBtn.textContent = 'Copy';
+      copyBtn.dataset.code = codeEl.textContent || '';
+      wrapper.appendChild(copyBtn);
+    }
   });
+
   temp.querySelectorAll('a').forEach((a) => {
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
   });
+
   return temp.innerHTML;
 }

@@ -30,6 +30,13 @@
         "mac": "Alt+S"
       },
       "description": "Toggle Translation Side Panel"
+    },
+    "open_chat": {
+      "suggested_key": {
+        "default": "Alt+A",
+        "mac": "Alt+A"
+      },
+      "description": "Open Chat Window"
     }
   },
   "content_scripts": [

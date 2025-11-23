@@ -77,30 +77,108 @@ async function handleTranslate() {
   const resultsDiv = document.getElementById('results');
   resultsDiv.innerHTML = '<div class="sp-loading">Translating...</div>';
 
-  // Translate to each language
+  // Translate to each language with streaming
   const results = {};
   for (const lang of targetLangs) {
     try {
-      const response = await chrome.runtime.sendMessage({
-        type: 'translate',
-        payload: { text, from: 'auto', to: lang },
+      // Create result card immediately
+      const languages = getTargetLanguages();
+      const langMap = Object.fromEntries(languages.map((l) => [l.code, l]));
+      const langInfo = langMap[lang];
+
+      if (!resultsDiv.querySelector('.sp-results-container')) {
+        resultsDiv.innerHTML = '<div class="sp-results-container"></div>';
+      }
+      const container = resultsDiv.querySelector('.sp-results-container');
+
+      const resultCard = document.createElement('div');
+      resultCard.className = 'sp-result-card';
+      resultCard.innerHTML = `
+        <div class="sp-result-header">
+          <div class="sp-result-header-left">
+            <span class="sp-collapse-icon">▼</span>
+            <h4>${langInfo.flag} ${langInfo.name}</h4>
+          </div>
+          <div class="sp-result-actions">
+            <span class="sp-streaming-indicator">⏳ Translating...</span>
+          </div>
+        </div>
+        <div class="sp-result-body">
+          <div class="sp-result-text sp-result-streaming" data-lang="${lang}"></div>
+        </div>
+      `;
+
+      // Add collapse/expand functionality
+      const header = resultCard.querySelector('.sp-result-header');
+      header.addEventListener('click', (e) => {
+        // Don't toggle if clicking on copy button
+        if (!e.target.closest('.sp-btn-copy')) {
+          resultCard.classList.toggle('collapsed');
+        }
       });
 
-      if (response.success) {
-        results[lang] = { success: true, data: response.data, fromCache: response.fromCache };
-      } else {
-        results[lang] = { success: false, error: response.error };
-      }
+      container.appendChild(resultCard);
+
+      // Use port-based streaming
+      const port = chrome.runtime.connect({ name: 'translate-stream' });
+      let translatedText = '';
+      const textEl = resultCard.querySelector('.sp-result-text');
+
+      port.onMessage.addListener((response) => {
+        if (response.type === 'chunk') {
+          translatedText += response.chunk;
+          textEl.textContent = translatedText;
+        } else if (response.type === 'complete') {
+          textEl.textContent = response.data;
+          textEl.classList.remove('sp-result-streaming');
+
+          const actionsDiv = resultCard.querySelector('.sp-result-actions');
+          actionsDiv.innerHTML = `
+            ${response.fromCache ? '<span class="sp-cache-badge">⚡ Cache</span>' : ''}
+            <button class="sp-btn-copy" data-text="${escapeHtml(response.data)}">Copy</button>
+          `;
+
+          // Add copy handler
+          actionsDiv.querySelector('.sp-btn-copy').addEventListener('click', async (e) => {
+            try {
+              await navigator.clipboard.writeText(response.data);
+              e.target.textContent = 'Copied!';
+              setTimeout(() => {
+                e.target.textContent = 'Copy';
+              }, 2000);
+            } catch (err) {
+              logError('Copy failed:', err);
+            }
+          });
+
+          results[lang] = { success: true, data: response.data, fromCache: response.fromCache };
+          port.disconnect();
+        } else if (response.type === 'error') {
+          textEl.classList.remove('sp-result-streaming');
+
+          // Update the card to show error, keeping collapse functionality
+          const actionsDiv = resultCard.querySelector('.sp-result-actions');
+          actionsDiv.innerHTML = '';
+
+          const body = resultCard.querySelector('.sp-result-body');
+          body.innerHTML = `<div class="sp-result-error">❌ ${escapeHtml(response.error)}</div>`;
+
+          // eslint-disable-next-line no-unused-vars
+          results[lang] = { success: false, error: response.error };
+          port.disconnect();
+        }
+      });
+
+      // Send translation request
+      port.postMessage({ text, from: 'auto', to: lang });
     } catch (err) {
       results[lang] = { success: false, error: err.message };
     }
   }
-
-  // Display results
-  displayResults(results);
 }
 
-// Display translation results
+// Display translation results (legacy - replaced by streaming)
+// eslint-disable-next-line no-unused-vars
 function displayResults(results) {
   const languages = getTargetLanguages();
   const langMap = Object.fromEntries(languages.map((l) => [l.code, l]));
@@ -116,22 +194,41 @@ function displayResults(results) {
     if (result.success) {
       resultCard.innerHTML = `
         <div class="sp-result-header">
-          <h4>${langInfo.flag} ${langInfo.name}</h4>
+          <div class="sp-result-header-left">
+            <span class="sp-collapse-icon">▼</span>
+            <h4>${langInfo.flag} ${langInfo.name}</h4>
+          </div>
           <div class="sp-result-actions">
             ${result.fromCache ? '<span class="sp-cache-badge">⚡ Cache</span>' : ''}
             <button class="sp-btn-copy" data-text="${escapeHtml(result.data)}">Copy</button>
           </div>
         </div>
-        <div class="sp-result-text">${escapeHtml(result.data)}</div>
+        <div class="sp-result-body">
+          <div class="sp-result-text">${escapeHtml(result.data)}</div>
+        </div>
       `;
     } else {
       resultCard.innerHTML = `
         <div class="sp-result-header">
-          <h4>${langInfo.flag} ${langInfo.name}</h4>
+          <div class="sp-result-header-left">
+            <span class="sp-collapse-icon">▼</span>
+            <h4>${langInfo.flag} ${langInfo.name}</h4>
+          </div>
         </div>
-        <div class="sp-result-error">❌ ${escapeHtml(result.error)}</div>
+        <div class="sp-result-body">
+          <div class="sp-result-error">❌ ${escapeHtml(result.error)}</div>
+        </div>
       `;
     }
+
+    // Add collapse/expand functionality
+    const header = resultCard.querySelector('.sp-result-header');
+    header.addEventListener('click', (e) => {
+      // Don't toggle if clicking on copy button
+      if (!e.target.closest('.sp-btn-copy')) {
+        resultCard.classList.toggle('collapsed');
+      }
+    });
 
     resultsDiv.appendChild(resultCard);
   });

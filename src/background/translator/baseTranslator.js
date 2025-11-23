@@ -43,12 +43,12 @@ export class BaseTranslator {
 
   /**
    * Translate text from one language to another
-   * @param {string} text - Text to translate
-   * @param {string} from - Source language code
-   * @param {string} to - Target language code
+   * @param {string} _text - Text to translate
+   * @param {string} _from - Source language code
+   * @param {string} _to - Target language code
    * @returns {Promise<string>} Translated text
    */
-  async translate(text, from, to) {
+  async translate(_text, _from, _to) {
     throw new Error('translate() must be implemented by subclass');
   }
 
@@ -67,7 +67,21 @@ export class BaseTranslator {
 
     const targetLang = langMap[to] || to;
 
-    return `Translate to ${targetLang}. Output only translation. Keep format/paragraphs. Preserve HTML/code/names.`;
+    return `You are a professional ${targetLang} translator. Translate everything to ${targetLang}.
+
+CRITICAL: Output ONLY the ${targetLang} translation. NO explanations. NO analysis. NO Chinese. NO English explanations.
+
+RULES:
+1. Translate directly to ${targetLang}
+2. Output ONLY translated text
+3. NO extra commentary
+4. Preserve formatting
+5. Keep HTML/code/URLs unchanged
+
+Example input: "Hello world"
+Example output: "Xin chào thế giới" (Vietnamese only, nothing else)
+
+Translate to ${targetLang} now:`;
   }
 
   /**

@@ -28,19 +28,7 @@ export const DEFAULT_CONFIG = {
   // Gemini settings
   gemini: {
     apiKey: '',
-    model: 'gemini-pro',
-    host: 'https://generativelanguage.googleapis.com',
-    path: '/v1beta/models/gemini-pro:generateContent',
-    temperature: 0.3,
-    maxTokens: 10000,
-  },
-
-  // Copilot settings (OpenAI-compatible)
-  copilot: {
-    apiKey: '',
-    model: 'gpt-4o-mini',
-    host: 'https://api.githubcopilot.com',
-    path: '/chat/completions',
+    model: 'gemini-2.0-flash-exp',
     temperature: 0.3,
     maxTokens: 10000,
   },

@@ -19,13 +19,13 @@ smart-translator/
 │   │   │   ├── memoryCache.js       # LRU memory cache
 │   │   │   └── persistentCache.js   # chrome.storage.local wrapper
 │   │   ├── services/       # Business logic services
+│   │   │   ├── chatService.js      # Chat feature logic
 │   │   │   └── detectLanguage.js   # Language detection
 │   │   └── translator/     # Translation providers
 │   │       ├── baseTranslator.js   # Abstract base class
 │   │       ├── openAITranslator.js # OpenAI implementation
 │   │       ├── claudeTranslator.js # Claude implementation
-│   │       ├── geminiTranslator.js # Gemini implementation
-│   │       └── copilotTranslator.js # Copilot implementation
+│   │       └── geminiTranslator.js # Gemini implementation
 │   │
 │   ├── content/            # Content Scripts (injected into pages)
 │   │   ├── content.js      # Main entry point
@@ -44,6 +44,11 @@ smart-translator/
 │   │   ├── chat.html
 │   │   ├── chat.js
 │   │   └── chat.css
+│   │
+│   ├── sidepanel/          # Side Panel (persistent UI)
+│   │   ├── sidepanel.html
+│   │   ├── sidepanel.js
+│   │   └── sidepanel.css
 │   │
 │   ├── options/            # Settings Page
 │   │   ├── options.html
@@ -106,7 +111,7 @@ smart-translator/
 │  │  ├─ Cache Hit → Return immediately                │    │
 │  │  └─ Cache Miss → Call Translator                  │    │
 │  │     ↓                                              │    │
-│  │     OpenAI/Claude API Request (30s timeout)       │    │
+│  │     OpenAI/Claude/Gemini API Request (30s timeout)│    │
 │  │     ↓                                              │    │
 │  │     Store in Cache (Memory + Persistent)          │    │
 │  │     ↓                                              │    │
@@ -190,8 +195,13 @@ chrome.runtime.sendMessage({
 
 - **`backgroundMessageRouter.js`**: Message dispatcher
   - Routes messages to appropriate handlers
-  - Handles: `translate`, `detectLanguage`, `getSettings`, `clearCache`, `updateDebugMode`
+  - Handles: `translate`, `detectLanguage`, `getSettings`, `clearCache`, `updateDebugMode`, `chat`
   - Tracks telemetry (last 100 translations)
+
+- **`services/chatService.js`**:
+  - Manages chat sessions (history, system prompt)
+  - Handles streaming responses (OpenAI/Claude)
+  - Summarizes long conversations automatically
 
 **Message Handlers**:
 ```javascript
@@ -222,7 +232,8 @@ switch(message.type) {
 ```
 BaseTranslator (abstract)
 ├── OpenAITranslator
-└── ClaudeTranslator
+├── ClaudeTranslator
+└── GeminiTranslator
 ```
 
 **`BaseTranslator`**: Defines interface
@@ -233,17 +244,20 @@ BaseTranslator (abstract)
 
 **`OpenAITranslator`**: OpenAI implementation
 - Endpoint: `{host}{path}` (default: https://api.openai.com/v1/chat/completions)
-- Model: configurable (default: gpt-4-turbo-preview)
+- Model: configurable (default: gpt-4o-mini)
 - Timeout: 30 seconds
 - Supports streaming via SSE
-- Error handling: AbortError, API errors, invalid responses
 
 **`ClaudeTranslator`**: Claude implementation
 - Endpoint: `{host}{path}` (default: https://api.anthropic.com/v1/messages)
-- Model: configurable (default: claude-3-sonnet-20240229)
+- Model: configurable (default: claude-haiku-4-5-20251001)
 - Timeout: 30 seconds
 - Supports streaming via content_block_delta events
-- Error handling: AbortError, API errors, invalid responses
+
+**`GeminiTranslator`**: Google Gemini implementation
+- Endpoint: `generativelanguage.googleapis.com`
+- Model: configurable (default: gemini-2.0-flash-exp)
+- Key-based authentication (simplified config)
 
 **System Prompt Optimization**:
 ```javascript
@@ -276,12 +290,6 @@ CacheService
 
 **TTL**: Default 24 hours (86400000ms), configurable
 
-**Benefits**:
-- Memory cache: Instant access for recent translations
-- Persistent cache: Survives browser restarts
-- LRU eviction: Keeps most-used items
-- Reduces API calls significantly
-
 ---
 
 ### **5. Settings & Configuration**
@@ -290,28 +298,30 @@ CacheService
 ```javascript
 {
   config: {
-    provider: 'openai' | 'claude',
+    provider: 'openai' | 'claude' | 'gemini',
     defaultToLang: 'vi',
     debugMode: false,
     
     openai: {
       apiKey: 'sk-...',
-      model: 'gpt-4',
+      model: 'gpt-4o-mini',
       host: 'https://api.openai.com',
       path: '/v1/chat/completions',
-      temperature: 0.3,
-      maxTokens: 2048,
-      availableModels: ['gpt-4', 'gpt-3.5-turbo', ...]
+      availableModels: ['gpt-4o', 'gpt-3.5-turbo', ...]
     },
     
     claude: {
       apiKey: 'sk-ant-...',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-haiku-4-5-20251001',
       host: 'https://api.anthropic.com',
       path: '/v1/messages',
-      temperature: 0.3,
-      maxTokens: 2048,
       availableModels: ['claude-3-opus-20240229', ...]
+    },
+
+    gemini: {
+      apiKey: 'AIza...',
+      model: 'gemini-2.0-flash-exp',
+      availableModels: ['gemini-1.5-pro', ...]
     },
     
     cache: {
@@ -349,7 +359,7 @@ CacheService
 - ✅ Content Security Policy in manifest
 
 ### **Input Validation**
-- ✅ Text length warnings for >200 chars
+- ✅ Text length warnings for >5000 chars
 - ✅ API timeout prevents hanging (30s max)
 - ✅ Error messages sanitized
 
@@ -365,19 +375,8 @@ CacheService
 ### **2. Timeouts**
 - 30-second timeout prevents hanging
 - AbortController for proper cancellation
-- User-friendly timeout messages
 
-### **3. System Prompt**
-- Reduced from 100 chars → 75 chars
-- Faster API processing
-- Maintains translation quality
-
-### **4. Token Limits**
-- Default max_tokens: 2048
-- Faster generation for most use cases
-- Configurable for longer texts
-
-### **5. UI**
+### **3. UI**
 - Typewriter effect gives perception of speed
 - Shows loading indicators with time estimates
 - Debounced text selection (300ms)
@@ -388,35 +387,21 @@ CacheService
 
 ### **Functionality**
 - [ ] Text selection shows floating icon
-- [ ] Icon positioned correctly (multi-line, viewport edges)
 - [ ] Mini popup displays translation
 - [ ] Expand panel works with all features
 - [ ] Copy button copies to clipboard
 - [ ] Language preference persists
 - [ ] Cache works (memory + persistent)
 - [ ] Timeout works after 30s
+- [ ] Side panel opens and translates
+- [ ] Chat page works with streaming
 
 ### **API Integration**
 - [ ] OpenAI translation works
 - [ ] Claude translation works
-- [ ] Custom endpoints work
+- [ ] Gemini translation works
+- [ ] Custom endpoints work (OpenAI/Claude)
 - [ ] Model selection persists
-- [ ] Error messages display correctly
-
-### **Settings**
-- [ ] Provider switching works
-- [ ] API key saving works
-- [ ] Debug mode toggles logging
-- [ ] Cache clearing works
-- [ ] Telemetry displays stats
-
-### **Edge Cases**
-- [ ] Empty text selection
-- [ ] Very long text (>1000 chars)
-- [ ] Special characters (HTML, code, emojis)
-- [ ] Network errors
-- [ ] Invalid API keys
-- [ ] Extension reload during translation
 
 ---
 
@@ -450,28 +435,6 @@ make clean     # Remove dist/ and node_modules/
 
 ---
 
-## **🔧 Configuration Files**
-
-### **manifest.json** (Chrome Extension)
-- Version: Manifest V3
-- Permissions: `storage`, `activeTab`, `scripting`
-- Background: Service Worker (`background.js`)
-- Content Scripts: Injected into all pages
-- Icons: 16x16, 48x48, 128x128
-
-### **vite.config.js** (Build)
-- Base: `./` for relative paths
-- Rollup: Multiple entry points
-- Output: Separate files for each component
-- CSS: Extracted to separate files
-
-### **package.json**
-- Dependencies: None (vanilla JS)
-- Dev Dependencies: Vite 5.4.21
-- Scripts: `dev`, `build`, `preview`
-
----
-
 ## **📝 Coding Standards**
 
 ### **File Organization**
@@ -485,47 +448,6 @@ make clean     # Remove dist/ and node_modules/
 - Constants: `UPPER_SNAKE_CASE`
 - CSS: `kebab-case` with `st-` prefix
 
-### **Documentation**
-- JSDoc for all public functions
-- Inline comments for complex logic
-- Examples in JSDoc
-
-### **Error Handling**
-- Always wrap async operations in try/catch
-- Log errors with logger service
-- Return `{ success: boolean, data?, error? }`
-
-### **Security**
-- Escape HTML: `escapeHtml(userInput)`
-- Never log API keys
-- Validate custom URLs
-
----
-
-## **🚀 Future Enhancements**
-
-### **Planned Features**
-1. True streaming via `chrome.runtime.Port`
-2. Keyboard shortcuts (Ctrl+Shift+T)
-3. Replace Original text in page
-4. More language support
-5. Translation history page
-6. Context menu integration
-7. Offline translation (local models)
-
-### **Performance**
-1. WebAssembly for faster hashing
-2. IndexedDB for larger cache
-3. Service Worker optimization
-4. Batch translation support
-
-### **UX**
-1. Dark mode
-2. Custom themes
-3. Pronunciation audio
-4. Dictionary integration
-5. Translation comparison (multiple providers)
-
 ---
 
 ## **📚 References**
@@ -534,10 +456,11 @@ make clean     # Remove dist/ and node_modules/
 - [Manifest V3 Migration](https://developer.chrome.com/docs/extensions/mv3/intro/)
 - [OpenAI API](https://platform.openai.com/docs/api-reference)
 - [Claude API](https://docs.anthropic.com/claude/reference)
+- [Google Gemini API](https://ai.google.dev/docs)
 - [Vite Documentation](https://vitejs.dev/)
 
 ---
 
-**Last Updated**: November 20, 2025  
+**Last Updated**: November 23, 2025  
 **Version**: 1.0.0  
 **Maintained by**: Smart Translator Team

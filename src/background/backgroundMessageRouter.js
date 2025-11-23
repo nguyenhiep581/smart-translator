@@ -7,12 +7,10 @@ import { getStorage, setStorage } from '../utils/storage.js';
 import { OpenAITranslator } from './translator/openAITranslator.js';
 import { ClaudeTranslator } from './translator/claudeTranslator.js';
 import { GeminiTranslator } from './translator/geminiTranslator.js';
-import { CopilotTranslator } from './translator/copilotTranslator.js';
 import { CacheService } from './cache/cacheService.js';
 import { detectLanguage } from './services/detectLanguage.js';
 import {
   getConversations,
-  saveConversations,
   upsertConversation,
   deleteConversation,
   createEmptyConversation,
@@ -52,6 +50,10 @@ export async function handleMessage(message, sender, sendResponse) {
         await handleClearCache(sendResponse);
         break;
 
+      case 'getCacheStats':
+        await handleGetCacheStats(sendResponse);
+        break;
+
       case 'updateDebugMode':
         await handleUpdateDebugMode(message.payload, sendResponse);
         break;
@@ -76,12 +78,79 @@ export async function handleMessage(message, sender, sendResponse) {
         await handleChatSend(message.payload, sendResponse);
         break;
 
+      case 'getAvailableModels':
+        await handleGetAvailableModels(message.payload, sendResponse);
+        break;
+
       default:
         sendResponse({ success: false, error: 'Unknown message type' });
     }
   } catch (err) {
     error('Error handling message:', err);
     sendResponse({ success: false, error: err.message });
+  }
+}
+
+/**
+ * Handle streaming translation via port connection
+ * @param {object} message - Message from port
+ * @param {Port} port - Chrome runtime port
+ */
+export async function handleStreamingTranslation(message, port) {
+  const { text, from, to } = message;
+
+  if (!text) {
+    port.postMessage({ type: 'error', error: 'No text provided' });
+    return;
+  }
+
+  try {
+    // Get configuration
+    const { config } = await getStorage('config');
+    const translator = createTranslator(config);
+
+    // Check cache first
+    const cacheKey = await cacheService.generateKey(
+      config.provider,
+      translator.getModel(),
+      from,
+      to,
+      text,
+    );
+
+    const cached = await cacheService.get(cacheKey);
+    if (cached) {
+      debug('Cache hit - instant response');
+      port.postMessage({ type: 'complete', data: cached, fromCache: true });
+      return;
+    }
+
+    // Stream translation
+    const startTime = Date.now();
+    let fullText = '';
+
+    const onStream = (chunk) => {
+      fullText += chunk;
+      port.postMessage({ type: 'chunk', chunk });
+    };
+
+    await translator.translate(text, from, to, onStream);
+    const duration = Date.now() - startTime;
+
+    debug(`Streaming translation to ${config.provider} took ${duration}ms`);
+
+    // Cache the result
+    await cacheService.set(cacheKey, fullText.trim());
+
+    port.postMessage({
+      type: 'complete',
+      data: fullText.trim(),
+      fromCache: false,
+      duration,
+    });
+  } catch (err) {
+    error('Streaming translation error:', err);
+    port.postMessage({ type: 'error', error: err.message });
   }
 }
 
@@ -191,6 +260,19 @@ async function handleClearCache(sendResponse) {
     sendResponse({ success: true });
   } catch (err) {
     error('Clear cache error:', err);
+    sendResponse({ success: false, error: err.message });
+  }
+}
+
+/**
+ * Handle get cache stats request
+ */
+async function handleGetCacheStats(sendResponse) {
+  try {
+    const stats = await cacheService.getStats();
+    sendResponse({ success: true, data: stats });
+  } catch (err) {
+    error('Get cache stats error:', err);
     sendResponse({ success: false, error: err.message });
   }
 }
@@ -372,6 +454,59 @@ async function handleChatStream(port, payload) {
 }
 
 /**
+ * Get available models from provider
+ */
+async function handleGetAvailableModels(payload, sendResponse) {
+  try {
+    // Handle both payload.provider and direct provider property
+    const provider = payload?.provider || payload;
+
+    if (!provider || typeof provider !== 'string') {
+      sendResponse({ success: false, error: 'Provider not specified' });
+      return;
+    }
+
+    const { config } = await chrome.storage.local.get('config');
+
+    if (!config || !config[provider]) {
+      sendResponse({ success: false, error: `Provider ${provider} not configured` });
+      return;
+    }
+
+    const translator = createTranslator({ ...config, provider });
+
+    // Try to get models from the provider
+    let models = [];
+
+    if (typeof translator.getAvailableModels === 'function') {
+      models = await translator.getAvailableModels();
+    } else {
+      // Fallback to configured models or defaults
+      models = config[provider].availableModels || [];
+
+      if (!models.length) {
+        // Use default models
+        const defaults = {
+          openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+          claude: [
+            'claude-haiku-4-5-20251001',
+            'claude-3-sonnet-20240229',
+            'claude-3-opus-20240229',
+          ],
+          gemini: ['gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+        };
+        models = defaults[provider] || [];
+      }
+    }
+
+    sendResponse({ success: true, models });
+  } catch (err) {
+    error('Error getting available models:', err);
+    sendResponse({ success: false, error: err.message });
+  }
+}
+
+/**
  * Create translator instance based on config
  */
 function createTranslator(config) {
@@ -382,8 +517,6 @@ function createTranslator(config) {
       return new ClaudeTranslator(config.claude);
     case 'gemini':
       return new GeminiTranslator(config.gemini);
-    case 'copilot':
-      return new CopilotTranslator(config.copilot);
     default:
       throw new Error(`Unknown provider: ${config.provider}`);
   }

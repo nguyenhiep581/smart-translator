@@ -254,7 +254,44 @@ Both OpenAI and Claude translators support custom endpoints:
 
 ---
 
-# #️⃣ **3. Language Detection API**
+# #️⃣ **3. Gemini API (Google)**
+
+## **3.1 Integration Method**
+
+The extension uses the official Google GenAI SDK (`@google/genai`) for reliability and streaming support.
+
+## **3.2 Authentication**
+
+```javascript
+import { GoogleGenAI } from '@google/genai';
+const ai = new GoogleGenAI({ apiKey: CONFIG_API_KEY });
+```
+
+## **3.3 Configuration**
+
+- **Model**: `gemini-2.0-flash-exp` (default)
+- **Temperature**: 0.3 (default)
+- **Max Tokens**: 10000 (default)
+
+## **3.4 Recommended Models**
+
+| Model | Speed | Quality | Context Window |
+|-------|-------|---------|----------------|
+| `gemini-2.0-flash-exp` | Very Fast | Excellent | 1M+ |
+| `gemini-1.5-pro` | Fast | Excellent | 2M |
+| `gemini-1.5-flash` | Extremely Fast | Good | 1M |
+
+## **3.5 Error Handling**
+
+| Error | Description |
+|-------|-------------|
+| `RESOURCE_EXHAUSTED` | Quota exceeded (429) |
+| `PERMISSION_DENIED` | Invalid API key (403) |
+| `INVALID_ARGUMENT` | Malformed request (400) |
+
+---
+
+# #️⃣ **4. Language Detection API**
 
 ## **4.1 Offline Detection (Default)**
 

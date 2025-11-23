@@ -2,7 +2,7 @@ import { getStorage, setStorage } from '../../utils/storage.js';
 import { OpenAITranslator } from '../translator/openAITranslator.js';
 import { ClaudeTranslator } from '../translator/claudeTranslator.js';
 import { GeminiTranslator } from '../translator/geminiTranslator.js';
-import { CopilotTranslator } from '../translator/copilotTranslator.js';
+import { GoogleGenAI } from '@google/genai';
 import { error as logError } from '../../utils/logger.js';
 
 const CHAT_KEY = 'chatConversations';
@@ -66,8 +66,6 @@ function createTranslator(config, provider) {
       return new ChatClaude(config.claude);
     case 'gemini':
       return new ChatGemini(config.gemini);
-    case 'copilot':
-      return new ChatCopilot(config.copilot);
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }
@@ -111,49 +109,6 @@ class ChatOpenAI extends OpenAITranslator {
       return content.trim();
     } catch (err) {
       logError('OpenAI chat error:', err);
-      throw err;
-    }
-  }
-}
-
-class ChatCopilot extends CopilotTranslator {
-  async chat(systemPrompt, messages, conversation) {
-    const host = this.config.host || 'https://api.githubcopilot.com';
-    const path = this.config.path || '/chat/completions';
-    const endpoint = `${host}${path}`;
-    const bodyMessages = messages.map((m) => normalizeOpenAIMessage(m));
-    if (systemPrompt) {
-      bodyMessages.unshift({ role: 'system', content: systemPrompt });
-    }
-
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: conversation.model || this.config.model || 'gpt-4o-mini',
-          messages: bodyMessages,
-          temperature: this.config.temperature ?? 0.3,
-          max_tokens: conversation.maxTokens || this.config.maxTokens || 2048,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || `HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-      const content = data.choices?.[0]?.message?.content;
-      if (!content) {
-        throw new Error('Invalid response from Copilot');
-      }
-      return content.trim();
-    } catch (err) {
-      logError('Copilot chat error:', err);
       throw err;
     }
   }
@@ -206,43 +161,39 @@ class ChatClaude extends ClaudeTranslator {
 
 class ChatGemini extends GeminiTranslator {
   async chat(systemPrompt, messages, conversation) {
-    const host = this.config.host || 'https://generativelanguage.googleapis.com';
-    const path =
-      this.config.path || '/v1beta/models/gemini-pro:generateContent?key=' + this.config.apiKey;
-    const endpoint = path.startsWith('http') ? path : `${host}${path}`;
+    const ai = new GoogleGenAI({ apiKey: this.config.apiKey });
+    const modelName = (conversation.model || this.config.model || 'gemini-2.0-flash-exp').replace(
+      /^models\//,
+      '',
+    );
 
-    const userParts = messages.map((m) => ({
+    const contents = messages.map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
     }));
 
+    const generationConfig = {
+      temperature: this.config.temperature ?? 0.3,
+      maxOutputTokens: conversation.maxTokens || this.config.maxTokens || 2048,
+    };
+
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: userParts,
-          systemInstruction: systemPrompt
-            ? { role: 'system', parts: [{ text: systemPrompt }] }
-            : undefined,
-          generationConfig: {
-            temperature: this.config.temperature ?? 0.3,
-            maxOutputTokens: conversation.maxTokens || this.config.maxTokens || 2048,
-          },
-        }),
+      // Generate content with system instruction in config
+      const result = await ai.models.generateContent({
+        model: modelName,
+        contents,
+        config: {
+          ...generationConfig,
+          systemInstruction: systemPrompt ? [systemPrompt] : undefined,
+        },
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || `HTTP ${res.status}`);
-      }
+      const content = result.text;
 
-      const data = await res.json();
-      const textPart = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!textPart) {
+      if (!content) {
         throw new Error('Invalid response from Gemini');
       }
-      return String(textPart).trim();
+      return content.trim();
     } catch (err) {
       logError('Gemini chat error:', err);
       throw err;
@@ -253,11 +204,9 @@ class ChatGemini extends GeminiTranslator {
 export async function streamChatMessage(config, conversation, userMessage, onChunk) {
   const provider = conversation.provider;
   if (provider === 'gemini') {
-    const text = await sendChatMessage(config, conversation, userMessage);
-    onChunk(text, true);
-    return text;
+    return streamGemini(config, conversation, userMessage, onChunk);
   }
-  if (provider === 'openai' || provider === 'copilot') {
+  if (provider === 'openai') {
     return streamOpenAIStyle(config, conversation, userMessage, onChunk);
   }
   if (provider === 'claude') {
@@ -282,13 +231,8 @@ function buildChatPayload(conversation, userMessage) {
 }
 
 async function streamOpenAIStyle(config, conversation, userMessage, onChunk) {
-  const useCopilot = conversation.provider === 'copilot';
-  const host = useCopilot
-    ? config.copilot.host || 'https://api.githubcopilot.com'
-    : config.openai.host || 'https://api.openai.com';
-  const path = useCopilot
-    ? config.copilot.path || '/chat/completions'
-    : config.openai.path || '/v1/chat/completions';
+  const host = config.openai.host || 'https://api.openai.com';
+  const path = config.openai.path || '/v1/chat/completions';
   const endpoint = `${host}${path}`;
 
   const { systemPrompt, messages } = buildChatPayload(conversation, userMessage);
@@ -302,19 +246,13 @@ async function streamOpenAIStyle(config, conversation, userMessage, onChunk) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${useCopilot ? config.copilot.apiKey : config.openai.apiKey}`,
+      Authorization: `Bearer ${config.openai.apiKey}`,
     },
     body: JSON.stringify({
-      model:
-        conversation.model ||
-        (useCopilot ? config.copilot.model || 'gpt-4o-mini' : config.openai.model || 'gpt-4o-mini'),
+      model: conversation.model || config.openai.model || 'gpt-4o-mini',
       messages: bodyMessages,
-      temperature: useCopilot
-        ? (config.copilot.temperature ?? 0.3)
-        : (config.openai.temperature ?? 0.3),
-      max_tokens:
-        conversation.maxTokens ||
-        (useCopilot ? config.copilot.maxTokens || 2048 : config.openai.maxTokens || 2048),
+      temperature: config.openai.temperature ?? 0.3,
+      max_tokens: conversation.maxTokens || config.openai.maxTokens || 2048,
       stream: true,
     }),
   });
@@ -363,6 +301,53 @@ async function streamOpenAIStyle(config, conversation, userMessage, onChunk) {
 
   onChunk(fullText, true);
   return fullText.trim();
+}
+
+async function streamGemini(config, conversation, userMessage, onChunk) {
+  await ensureSummaryIfNeeded(config, conversation, userMessage);
+  const { systemPrompt, messages } = buildChatPayload(conversation, userMessage);
+
+  const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey });
+  const modelName = (conversation.model || config.gemini.model || 'gemini-2.0-flash-exp').replace(
+    /^models\//,
+    '',
+  );
+
+  const contents = messages.map((m) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
+
+  const generationConfig = {
+    temperature: config.gemini.temperature ?? 0.3,
+    maxOutputTokens: conversation.maxTokens || config.gemini.maxTokens || 2048,
+  };
+
+  try {
+    // Stream content with system instruction in config
+    const result = await ai.models.generateContentStream({
+      model: modelName,
+      contents,
+      config: {
+        ...generationConfig,
+        systemInstruction: systemPrompt ? [systemPrompt] : undefined,
+      },
+    });
+
+    let fullText = '';
+    for await (const chunk of result) {
+      if (chunk.text) {
+        fullText += chunk.text;
+        onChunk(fullText, false);
+      }
+    }
+
+    onChunk(fullText, true);
+    return fullText.trim();
+  } catch (err) {
+    logError('Gemini streaming error:', err);
+    throw err;
+  }
 }
 
 async function streamClaude(config, conversation, userMessage, onChunk) {

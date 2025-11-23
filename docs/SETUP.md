@@ -227,6 +227,14 @@ git push origin feature/my-feature
 3. Select "Claude" as provider
 4. Enter API key and model (e.g., `claude-3-sonnet-20240229`)
 
+### Gemini Setup
+
+1. Get API key from https://aistudio.google.com/app/apikey
+2. Open extension Options page
+3. Select "Gemini" as provider
+4. Enter API key (e.g. `AIza...`)
+5. Model defaults to `gemini-2.0-flash-exp`
+
 ### Custom Provider Setup
 
 1. Ensure your API follows OpenAI-compatible format

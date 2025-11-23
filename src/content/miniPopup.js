@@ -141,44 +141,66 @@ async function translateText(selection) {
   const startTime = performance.now();
 
   try {
-    const response = await chrome.runtime.sendMessage({
-      type: 'translate',
-      payload: {
-        text: selection.text,
-        from: 'auto',
-        to: toLang,
-      },
+    // Use port-based streaming for better UX
+    const port = chrome.runtime.connect({ name: 'translate-stream' });
+
+    let translatedText = '';
+    let isComplete = false;
+
+    // Show translation area immediately
+    translationEl.innerHTML = '<div class="st-translation-text"></div>';
+    const textEl = translationEl.querySelector('.st-translation-text');
+
+    port.onMessage.addListener((response) => {
+      if (response.type === 'chunk') {
+        // Append streaming chunk
+        translatedText += response.chunk;
+        textEl.textContent = translatedText;
+      } else if (response.type === 'complete') {
+        isComplete = true;
+        currentTranslation = response.data;
+        textEl.textContent = response.data;
+
+        const endTime = performance.now();
+        const duration = Math.round(endTime - startTime);
+        debug(`Translation took ${duration}ms ${response.fromCache ? '(cached)' : '(streamed)'}`);
+
+        if (response.fromCache) {
+          translationEl.innerHTML = `<div class="st-translation-text">${escapeHtml(response.data)}</div>`;
+          translationEl.innerHTML += '<div class="st-cache-indicator">⚡ From cache</div>';
+        }
+
+        // Enable buttons
+        miniPopup.querySelectorAll('.st-btn').forEach((btn) => (btn.disabled = false));
+
+        port.disconnect();
+      } else if (response.type === 'error') {
+        const errorMsg = response.error || 'Translation failed';
+        translationEl.innerHTML = `<div class="st-error">${escapeHtml(errorMsg)}</div>`;
+
+        // Show helpful message for timeout errors
+        if (errorMsg.includes('timeout')) {
+          translationEl.innerHTML +=
+            '<div class="st-help">💡 Try selecting shorter text or check your API endpoint speed</div>';
+        }
+
+        port.disconnect();
+      }
     });
 
-    const endTime = performance.now();
-    const duration = Math.round(endTime - startTime);
-    debug(`Translation took ${duration}ms ${response.fromCache ? '(cached)' : '(API call)'}`);
-
-    if (response.success) {
-      currentTranslation = response.data;
-
-      // Show with typewriter effect
-      translationEl.innerHTML = '<div class="st-translation-text"></div>';
-      const textEl = translationEl.querySelector('.st-translation-text');
-
-      await typewriterEffect(textEl, response.data);
-
-      if (response.fromCache) {
-        translationEl.innerHTML += '<div class="st-cache-indicator">⚡ From cache</div>';
+    port.onDisconnect.addListener(() => {
+      if (!isComplete && translatedText) {
+        // Partial result received
+        currentTranslation = translatedText;
       }
+    });
 
-      // Enable buttons
-      miniPopup.querySelectorAll('.st-btn').forEach((btn) => (btn.disabled = false));
-    } else {
-      const errorMsg = response.error || 'Translation failed';
-      translationEl.innerHTML = `<div class="st-error">${escapeHtml(errorMsg)}</div>`;
-
-      // Show helpful message for timeout errors
-      if (errorMsg.includes('timeout')) {
-        translationEl.innerHTML +=
-          '<div class="st-help">💡 Try selecting shorter text or check your API endpoint speed</div>';
-      }
-    }
+    // Send translation request
+    port.postMessage({
+      text: selection.text,
+      from: 'auto',
+      to: toLang,
+    });
   } catch (err) {
     // Handle extension context invalidated error
     if (err.message.includes('Extension context invalidated')) {
@@ -193,25 +215,6 @@ async function translateText(selection) {
       )}</div>`;
     }
   }
-}
-
-/**
- * Typewriter effect for displaying text
- */
-async function typewriterEffect(element, text, speed = 20) {
-  element.textContent = '';
-  element.classList.add('fade-in');
-
-  for (let i = 0; i < text.length; i++) {
-    element.textContent += text[i];
-    if (i % 3 === 0) {
-      // Update every 3 characters for better performance
-      await new Promise((resolve) => setTimeout(resolve, speed));
-    }
-  }
-
-  // Ensure full text is shown
-  element.textContent = text;
 }
 
 /**

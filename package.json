@@ -24,16 +24,19 @@
   "author": "nguyenhiep",
   "license": "MIT",
   "devDependencies": {
-    "vite": "^5.0.0",
     "@vitejs/plugin-legacy": "^5.0.0",
-    "prettier": "^3.1.0",
     "eslint": "^8.55.0",
     "husky": "^9.0.0",
-    "lint-staged": "^15.2.0"
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.1.0",
+    "vite": "^5.0.0"
   },
   "dependencies": {
+    "@google/genai": "^1.30.0",
+    "dompurify": "^3.3.0",
     "franc-min": "^6.2.0",
     "highlight.js": "^11.9.0",
+    "katex": "^0.16.25",
     "marked": "^12.0.2"
   },
   "lint-staged": {

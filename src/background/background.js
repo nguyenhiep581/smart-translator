@@ -43,10 +43,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true; // Keep channel open for async response
 });
 
+// Handle port connections for streaming
+import { handleStreamingTranslation } from './backgroundMessageRouter.js';
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === 'translate-stream') {
+    port.onMessage.addListener(async (message) => {
+      await handleStreamingTranslation(message, port);
+    });
+  }
+});
+
 // Handle keyboard command (restores user-gesture context)
 chrome.commands.onCommand.addListener((command) => {
   if (command === 'toggle_sidepanel') {
     handleToggleSidePanel(() => {});
+  } else if (command === 'open_chat') {
+    const url = chrome.runtime.getURL('src/chat/chat.html');
+    chrome.tabs.create({ url });
   }
 });
 
