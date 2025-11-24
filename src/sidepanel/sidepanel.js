@@ -5,6 +5,27 @@
 import { getTargetLanguages } from '../config/defaults.js';
 import { error as logError } from '../utils/logger.js';
 
+async function ensureProviderConfiguredForPanel() {
+  try {
+    const { config } = await chrome.storage.local.get('config');
+    const provider = config?.provider || 'openai';
+    if (!config?.[provider]?.apiKey) {
+      showError('Please add an API key in Options before translating.');
+      try {
+        chrome.runtime.openOptionsPage();
+      } catch (err) {
+        logError('Failed to open options page from side panel:', err);
+      }
+      return null;
+    }
+    return config;
+  } catch (err) {
+    logError('Failed to read configuration for side panel:', err);
+    showError('Could not read settings. Please reopen Options to configure an API key.');
+    return null;
+  }
+}
+
 // Load saved language preferences
 async function loadLanguagePreferences() {
   try {
@@ -67,6 +88,11 @@ async function handleTranslate() {
 
   if (targetLangs.length === 0) {
     showError('Please select at least one target language');
+    return;
+  }
+
+  const config = await ensureProviderConfiguredForPanel();
+  if (!config) {
     return;
   }
 

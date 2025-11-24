@@ -52,8 +52,13 @@ async function init() {
   await loadConfig();
   await loadConversations();
   connectStreamPort();
-  populateProviderSelect();
-  populateModelSelect(config.provider || 'openai', getDefaultModel(config.provider || 'openai'));
+  const activeProvider = populateProviderSelect();
+  if (activeProvider) {
+    populateModelSelect(activeProvider, getDefaultModel(activeProvider));
+  } else {
+    disableModelSelect('Add an API key in Options to choose models');
+  }
+  updateSendAvailability();
   bindEvents();
   renderConversations();
   if (conversations.length === 0) {
@@ -67,10 +72,14 @@ async function init() {
     if (areaName === 'local' && changes.config) {
       loadConfig().then(() => {
         // Update provider and model selects
-        populateProviderSelect();
-        const provider = config.provider || 'openai';
-        const model = currentConversation?.model || getDefaultModel(provider);
-        populateModelSelect(provider, model);
+        const provider = populateProviderSelect();
+        if (provider) {
+          const model = currentConversation?.model || getDefaultModel(provider);
+          populateModelSelect(provider, model);
+        } else {
+          disableModelSelect('Add an API key in Options to choose models');
+        }
+        updateSendAvailability();
       });
     }
   });
@@ -110,8 +119,15 @@ async function loadConfig() {
   providerModels = {
     openai: config.openai?.availableModels || [],
     claude: config.claude?.availableModels || [],
-    gemini: config.gemini?.availableModels || [],
+    gemini: filterGeminiModels(config.gemini?.availableModels || []),
   };
+
+  enforceActiveProvider();
+
+  // Sanitize stored models for Gemini
+  if (config.gemini) {
+    config.gemini.model = sanitizeGeminiModel(config.gemini.model);
+  }
 
   // Pick defaults if model present in config but not in available list
   ['openai', 'claude', 'gemini'].forEach((p) => {
@@ -128,6 +144,48 @@ async function loadConfig() {
       providerModels[activeProvider].unshift(config.chatModel);
     }
   }
+}
+
+function filterGeminiModels(models) {
+  return (models || []).filter(
+    (m) =>
+      m &&
+      m.startsWith('gemini') &&
+      !m.toLowerCase().includes('embed') &&
+      !m.toLowerCase().includes('gecko'),
+  );
+}
+
+function sanitizeGeminiModel(model) {
+  if (!model) {
+    return 'gemini-2.5-flash';
+  }
+  if (
+    model.startsWith('gemini') &&
+    !model.toLowerCase().includes('embed') &&
+    !model.toLowerCase().includes('gecko')
+  ) {
+    return model.replace(/^models\//, '');
+  }
+  return 'gemini-2.5-flash';
+}
+
+function enforceActiveProvider() {
+  const providersWithKeys = ['openai', 'claude', 'gemini'].filter((p) => config?.[p]?.apiKey);
+  if (config?.provider && config[config.provider]?.apiKey) {
+    return config.provider;
+  }
+  if (providersWithKeys.length > 0) {
+    const chosen = providersWithKeys[0];
+    config.provider = chosen;
+    // Persist the resolved provider so background uses the same
+    chrome.storage.local.set({ config }).catch((err) => {
+      logError('Failed to persist resolved provider:', err);
+    });
+    return chosen;
+  }
+  config.provider = null;
+  return null;
 }
 
 async function refreshModels() {
@@ -222,6 +280,7 @@ function bindEvents() {
     config.provider = newProvider;
     await chrome.storage.local.set({ config });
     populateModelSelect(newProvider, getDefaultModel(newProvider));
+    updateSendAvailability();
     if (currentConversation) {
       currentConversation.provider = newProvider;
       currentConversation.model = getDefaultModel(newProvider);
@@ -463,7 +522,28 @@ async function sendMessage() {
   }
   const text = inputEl().value.trim();
   if (!text && attachments.length === 0) {
+    setComposerEnabled(
+      isProviderConfigured(providerSelect()?.value || config?.provider || 'openai'),
+    );
     return;
+  }
+
+  if (!ensureChatProviderConfigured()) {
+    return;
+  }
+
+  // Align conversation provider/model with current selection/config to avoid stale data
+  const activeProvider = providerSelect()?.value || config.provider || 'openai';
+  config.provider = activeProvider;
+  chrome.storage.local.set({ config }).catch((err) => logError('Persist provider failed', err));
+
+  if (currentConversation.provider !== activeProvider) {
+    currentConversation.provider = activeProvider;
+    currentConversation.model = getDefaultModel(activeProvider);
+  }
+
+  if (activeProvider === 'gemini') {
+    currentConversation.model = sanitizeGeminiModel(currentConversation.model);
   }
 
   if (!ensurePort()) {
@@ -646,48 +726,52 @@ function populateProviderSelect() {
     gemini: 'Gemini',
   };
 
-  // Only show providers that have API keys configured
-  const availableProviders = [];
-  if (config.openai?.apiKey) {
-    availableProviders.push('openai');
-  }
-  if (config.claude?.apiKey) {
-    availableProviders.push('claude');
-  }
-  if (config.gemini?.apiKey) {
-    availableProviders.push('gemini');
+  const configuredProviders = ['openai', 'claude', 'gemini'].filter((p) => config[p]?.apiKey);
+
+  if (configuredProviders.length === 0) {
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Add an API key in Options';
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    select.appendChild(placeholder);
+    return null;
   }
 
-  // If no providers configured, show all with a disabled state
-  if (availableProviders.length === 0) {
-    availableProviders.push('openai', 'claude', 'gemini');
-  }
-
-  availableProviders.forEach((provider) => {
+  configuredProviders.forEach((provider) => {
     const opt = document.createElement('option');
     opt.value = provider;
     opt.textContent = providerNames[provider];
-    if (!config[provider]?.apiKey) {
-      opt.textContent += ' (No API key)';
-      opt.disabled = true;
-    }
     select.appendChild(opt);
   });
 
-  // Set current provider
-  const currentProvider = config.provider || 'openai';
-  if (availableProviders.includes(currentProvider) && config[currentProvider]?.apiKey) {
+  // Set current provider to saved if configured, otherwise first configured
+  const currentProvider = config.provider;
+  if (currentProvider && configuredProviders.includes(currentProvider)) {
     select.value = currentProvider;
-  } else {
-    // Fallback to first available provider
-    const firstAvailable = availableProviders.find((p) => config[p]?.apiKey);
-    if (firstAvailable) {
-      select.value = firstAvailable;
-    }
+    return currentProvider;
   }
+
+  const chosen = configuredProviders[0];
+  select.value = chosen;
+  config.provider = chosen;
+  chrome.storage.local.set({ config }).catch((err) => logError('Failed to persist provider', err));
+  return chosen;
 }
 
 function populateModelSelect(provider, selected) {
+  // Refresh config.provider to stay in sync with UI
+  if (provider && config.provider !== provider) {
+    config.provider = provider;
+    chrome.storage.local.set({ config }).catch((err) => logError('Persist provider failed', err));
+  }
+
+  // Sanitize gemini models and selected value
+  if (provider === 'gemini') {
+    providerModels.gemini = filterGeminiModels(providerModels.gemini);
+    selected = sanitizeGeminiModel(selected);
+  }
+
   const options = {
     openai: providerModels.openai.length ? providerModels.openai : ['gpt-4o-mini', 'gpt-4o'],
     claude: providerModels.claude.length
@@ -700,6 +784,7 @@ function populateModelSelect(provider, selected) {
 
   const select = modelSelect();
   select.innerHTML = '';
+  select.disabled = false;
 
   models.forEach((m) => {
     const opt = document.createElement('option');
@@ -714,6 +799,73 @@ function populateModelSelect(provider, selected) {
   } else if (models.length > 0) {
     // Fallback to first model in the list
     select.value = models[0];
+    if (provider === 'gemini') {
+      config.gemini = { ...(config.gemini || {}), model: select.value };
+      chrome.storage.local
+        .set({ config })
+        .catch((err) => logError('Persist gemini model failed', err));
+    }
+  }
+}
+
+function disableModelSelect(message) {
+  const select = modelSelect();
+  select.innerHTML = '';
+  const opt = document.createElement('option');
+  opt.textContent = message;
+  opt.disabled = true;
+  opt.selected = true;
+  select.appendChild(opt);
+  select.disabled = true;
+}
+
+function isProviderConfigured(provider) {
+  return Boolean(config?.[provider]?.apiKey);
+}
+
+function ensureChatProviderConfigured(options = {}) {
+  const { openOptions = true, showError = true } = options;
+  const provider = providerSelect()?.value || config?.provider || 'openai';
+  const hasApiKey = isProviderConfigured(provider);
+  const sendBtn = document.getElementById('send-btn');
+  setComposerEnabled(hasApiKey);
+  if (!hasApiKey) {
+    if (showError) {
+      renderError('Please add an API key in Options before sending messages.');
+    }
+    if (openOptions) {
+      try {
+        chrome.runtime.openOptionsPage();
+      } catch (err) {
+        logError('Failed to open options page from chat:', err);
+      }
+    }
+    return false;
+  }
+  return true;
+}
+
+function updateSendAvailability() {
+  ensureChatProviderConfigured({ openOptions: false, showError: false });
+}
+
+function setComposerEnabled(enabled) {
+  const sendBtn = document.getElementById('send-btn');
+  if (sendBtn) {
+    sendBtn.disabled = !enabled;
+  }
+  const input = inputEl();
+  if (input) {
+    input.disabled = !enabled;
+  }
+  const attachBtn = document.getElementById('attach-btn');
+  if (attachBtn) {
+    attachBtn.disabled = !enabled;
+  }
+  const webSearchBtn = document.getElementById('web-search-btn');
+  if (webSearchBtn) {
+    webSearchBtn.disabled = !enabled;
+    webSearchBtn.classList.toggle('disabled', !enabled);
   }
 }
 

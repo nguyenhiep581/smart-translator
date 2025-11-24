@@ -389,6 +389,12 @@ body {
   font-weight: 500;
 }
 
+.stat-subtext {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--st-text-tertiary);
+}
+
 /* Info Box */
 .info-box {
   background: var(--st-bg-secondary);

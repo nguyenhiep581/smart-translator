@@ -100,24 +100,24 @@ export function getTargetLanguages() {
  * Uses Unicode flag emojis with Windows-compatible fallback
  */
 function getLanguageFlag(code) {
-  // Windows-compatible approach: Use Segoe UI Emoji font hint
+  // Use real emoji codepoints to avoid escaping issues across platforms
   const flags = {
-    en: '\uD83C\uDDEC\uD83C\uDDE7', // 🇬🇧
-    es: '\uD83C\uDDEA\uD83C\uDDF8', // 🇪🇸
-    fr: '\uD83C\uDDEB\uD83C\uDDF7', // 🇫🇷
-    de: '\uD83C\uDDE9\uD83C\uDDEA', // 🇩🇪
-    it: '\uD83C\uDDEE\uD83C\uDDF9', // 🇮🇹
-    pt: '\uD83C\uDDF5\uD83C\uDDF9', // 🇵🇹
-    ru: '\uD83C\uDDF7\uD83C\uDDFA', // 🇷🇺
-    ja: '\uD83C\uDDEF\uD83C\uDDF5', // 🇯🇵
-    ko: '\uD83C\uDDF0\uD83C\uDDF7', // 🇰🇷
-    zh: '\uD83C\uDDE8\uD83C\uDDF3', // 🇨🇳
-    ar: '\uD83C\uDDF8\uD83C\uDDE6', // 🇸🇦
-    hi: '\uD83C\uDDEE\uD83C\uDDF3', // 🇮🇳
-    vi: '\uD83C\uDDFB\uD83C\uDDF3', // 🇻🇳
-    th: '\uD83C\uDDF9\uD83C\uDDED', // 🇹🇭
+    en: String.fromCodePoint(0x1f1ec, 0x1f1e7), // 🇬🇧
+    es: String.fromCodePoint(0x1f1ea, 0x1f1f8), // 🇪🇸
+    fr: String.fromCodePoint(0x1f1eb, 0x1f1f7), // 🇫🇷
+    de: String.fromCodePoint(0x1f1e9, 0x1f1ea), // 🇩🇪
+    it: String.fromCodePoint(0x1f1ee, 0x1f1f9), // 🇮🇹
+    pt: String.fromCodePoint(0x1f1f5, 0x1f1f9), // 🇵🇹
+    ru: String.fromCodePoint(0x1f1f7, 0x1f1fa), // 🇷🇺
+    ja: String.fromCodePoint(0x1f1ef, 0x1f1f5), // 🇯🇵
+    ko: String.fromCodePoint(0x1f1f0, 0x1f1f7), // 🇰🇷
+    zh: String.fromCodePoint(0x1f1e8, 0x1f1f3), // 🇨🇳
+    ar: String.fromCodePoint(0x1f1f8, 0x1f1e6), // 🇸🇦
+    hi: String.fromCodePoint(0x1f1ee, 0x1f1f3), // 🇮🇳
+    vi: String.fromCodePoint(0x1f1fb, 0x1f1f3), // 🇻🇳
+    th: String.fromCodePoint(0x1f1f9, 0x1f1ed), // 🇹🇭
   };
-  return flags[code] || '\uD83C\uDF10'; // 🌐
+  return flags[code] || String.fromCodePoint(0x1f310); // 🌐
 }
 
 /**

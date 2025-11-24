@@ -327,10 +327,10 @@ async function streamGemini(config, conversation, userMessage, onChunk, searchRe
   const { systemPrompt, messages } = buildChatPayload(conversation, userMessage, searchResults);
 
   const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey });
-  const modelName = (conversation.model || config.gemini.model || 'gemini-2.0-flash-exp').replace(
-    /^models\//,
-    '',
-  );
+  const modelName = (conversation.model || config.gemini.model || 'gemini-2.5-flash')
+    .replace(/^models\//, '')
+    .replace(/^embedding-.*$/i, 'gemini-2.5-flash')
+    .replace(/gecko/i, 'gemini-2.5-flash');
 
   const contents = messages.map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',

@@ -655,6 +655,11 @@ body {
   transition: all 0.15s ease;
 }
 
+.composer-input:disabled {
+  background: #f5f6f8;
+  color: var(--muted);
+}
+
 .composer-row .btn.active {
   background-color: rgba(59, 130, 246, 0.1);
   color: #3b82f6;
@@ -878,6 +883,12 @@ body {
 
 .btn-primary:hover {
   background: var(--primary-hover);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .btn-ghost {

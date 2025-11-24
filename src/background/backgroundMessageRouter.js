@@ -514,6 +514,16 @@ async function handleGetAvailableModels(payload, sendResponse) {
       }
     }
 
+    if (provider === 'gemini') {
+      models = models.filter(
+        (m) =>
+          m &&
+          m.startsWith('gemini') &&
+          !m.toLowerCase().includes('embed') &&
+          !m.toLowerCase().includes('gecko'),
+      );
+    }
+
     sendResponse({ success: true, models });
   } catch (err) {
     error('Error getting available models:', err);
@@ -524,8 +534,33 @@ async function handleGetAvailableModels(payload, sendResponse) {
 /**
  * Create translator instance based on config
  */
+function resolveProvider(config) {
+  const preferred = config?.provider;
+  const hasPreferredKey = preferred && config?.[preferred]?.apiKey;
+  if (hasPreferredKey) {
+    return preferred;
+  }
+
+  const fallback = ['openai', 'claude', 'gemini'].find((p) => config?.[p]?.apiKey);
+  if (fallback) {
+    return fallback;
+  }
+
+  throw new Error('No provider configured. Please add an API key in Options.');
+}
+
 function createTranslator(config) {
-  switch (config.provider) {
+  const provider = resolveProvider(config);
+  // Ensure downstream consumers (cache keys, etc.) use the resolved provider
+  config.provider = provider;
+
+  if (!config[provider]) {
+    throw new Error(
+      `Configuration for provider "${provider}" is missing. Please re-save in Options.`,
+    );
+  }
+
+  switch (provider) {
     case 'openai':
       return new OpenAITranslator(config.openai);
     case 'claude':
@@ -533,6 +568,6 @@ function createTranslator(config) {
     case 'gemini':
       return new GeminiTranslator(config.gemini);
     default:
-      throw new Error(`Unknown provider: ${config.provider}`);
+      throw new Error(`Unknown provider: ${provider}`);
   }
 }

@@ -311,7 +311,16 @@ async function getAvailableModels(provider, buttonId) {
       const data = await response.json();
       models = (data.models || [])
         .map((m) => (m.name || '').replace(/^models\//, ''))
-        .filter(Boolean);
+        .filter(
+          (name) =>
+            name &&
+            name.startsWith('gemini') &&
+            !name.toLowerCase().includes('embed') &&
+            !name.toLowerCase().includes('gecko'),
+        );
+      if (models.length === 0) {
+        models = ['gemini-2.5-flash', 'gemini-1.5-pro'];
+      }
       updateModelSelect('gemini-model', models, 'gemini');
       showNotification(`Gemini models: ${models.slice(0, 6).join(', ')}`, 'success');
     }
@@ -561,18 +570,50 @@ async function loadSettingsUI() {
   }
 }
 
+function formatBytes(bytes) {
+  if (bytes === undefined || bytes === null) {
+    return '-';
+  }
+  if (bytes === 0) {
+    return '0 B';
+  }
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  const fixed = value >= 10 ? value.toFixed(0) : value.toFixed(1);
+  return `${fixed} ${units[unitIndex]}`;
+}
+
 // Load cache statistics
 async function loadCacheStats() {
   try {
     const response = await chrome.runtime.sendMessage({ type: 'getCacheStats' });
     if (response.success) {
-      const stats = response.data;
-      document.getElementById('cache-memory-count').textContent = stats.memorySize || 0;
-      document.getElementById('cache-persistent-count').textContent = stats.persistentSize || 0;
+      const { memory = {}, persistent = {} } = response.data || {};
+      const memorySize = memory.size ?? 0;
+      const memoryMax = memory.maxSize ?? 0;
+      const persistentCount = persistent.count ?? 0;
+      const persistentBytes = persistent.size ?? 0;
+
+      document.getElementById('cache-memory-count').textContent = memorySize;
+      document.getElementById('cache-memory-meta').textContent = `Max ${memoryMax} entries`;
+      document.getElementById('cache-persistent-count').textContent = persistentCount;
+      document.getElementById('cache-persistent-meta').textContent = formatBytes(persistentBytes);
+      return;
     }
   } catch (err) {
     logError('Load cache stats failed:', err);
   }
+
+  // Fallback display when stats not available
+  document.getElementById('cache-memory-count').textContent = '-';
+  document.getElementById('cache-memory-meta').textContent = 'Max: -';
+  document.getElementById('cache-persistent-count').textContent = '-';
+  document.getElementById('cache-persistent-meta').textContent = 'Size: -';
 }
 
 // Show toast notification
