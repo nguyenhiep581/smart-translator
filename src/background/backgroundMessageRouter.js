@@ -366,7 +366,7 @@ async function handleChatSend(payload, sendResponse) {
     const userPayload = {
       role: 'user',
       content: message.content,
-      attachments: (message.attachments || []).slice(0, 3),
+      attachments: (message.attachments || []).slice(0, 4),
     };
 
     const assistantReply = await sendChatMessage(config, convo, userPayload);
@@ -421,7 +421,7 @@ async function handleChatStream(port, payload) {
     const userPayload = {
       role: 'user',
       content: message.content,
-      attachments: (message.attachments || []).slice(0, 3),
+      attachments: (message.attachments || []).slice(0, 4),
     };
 
     // Summary if needed

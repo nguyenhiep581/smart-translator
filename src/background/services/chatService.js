@@ -220,8 +220,21 @@ function buildChatPayload(conversation, userMessage, searchResults) {
   const contextMessages = history.slice(-6);
 
   const finalUserMessage = { ...userMessage };
+
+  // Handle markdown attachments by appending to content
+  if (finalUserMessage.attachments && finalUserMessage.attachments.length > 0) {
+    const markdownFiles = finalUserMessage.attachments.filter((att) => att.isMarkdown);
+    if (markdownFiles.length > 0) {
+      let mdContent = '';
+      markdownFiles.forEach((att) => {
+        mdContent += `\n\n--- File: ${att.name} ---\n${att.dataUrl}\n--- End of ${att.name} ---\n`;
+      });
+      finalUserMessage.content = finalUserMessage.content + mdContent;
+    }
+  }
+
   if (searchResults) {
-    finalUserMessage.content = `${searchResults}\n\nBased on the above search results, please answer the following.\n\n${userMessage.content}`;
+    finalUserMessage.content = `${searchResults}\n\nBased on the above search results, please answer the following.\n\n${finalUserMessage.content}`;
   }
 
   const combined = [...contextMessages, finalUserMessage];
@@ -439,11 +452,21 @@ function normalizeOpenAIMessage(message) {
   }
 
   const parts = [{ type: 'text', text: message.content }];
-  message.attachments.slice(0, 3).forEach((att) => {
-    parts.push({
-      type: 'image_url',
-      image_url: { url: att.dataUrl },
-    });
+  message.attachments.slice(0, 4).forEach((att) => {
+    if (att.isMarkdown) {
+      // For markdown files, extract text content and append to message
+      const mdContent = att.dataUrl; // Text content for markdown
+      parts.push({
+        type: 'text',
+        text: `\n\n--- File: ${att.name} ---\n${mdContent}\n--- End of ${att.name} ---\n`,
+      });
+    } else {
+      // For images, use image_url
+      parts.push({
+        type: 'image_url',
+        image_url: { url: att.dataUrl },
+      });
+    }
   });
   return { role: message.role, content: parts };
 }

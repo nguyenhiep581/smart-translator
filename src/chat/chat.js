@@ -427,10 +427,28 @@ function renderAttachmentPreviews() {
   attachments.forEach((att, idx) => {
     const wrap = document.createElement('div');
     wrap.className = 'attachment';
-    wrap.innerHTML = `
-      <img src="${att.dataUrl}" alt="${escapeHtml(att.name)}" />
-      <button data-idx="${idx}">×</button>
-    `;
+
+    if (att.isMarkdown) {
+      // Show markdown file icon and name
+      wrap.innerHTML = `
+        <div class="markdown-file">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="9" y1="15" x2="15" y2="15"></line>
+          </svg>
+          <span>${escapeHtml(att.name)}</span>
+        </div>
+        <button data-idx="${idx}">×</button>
+      `;
+    } else {
+      // Show image preview
+      wrap.innerHTML = `
+        <img src="${att.dataUrl}" alt="${escapeHtml(att.name)}" />
+        <button data-idx="${idx}">×</button>
+      `;
+    }
+
     wrap.querySelector('button').addEventListener('click', () => {
       attachments.splice(idx, 1);
       renderAttachmentPreviews();
@@ -459,7 +477,7 @@ async function sendMessage() {
 
   const messagePayload = {
     content: text,
-    attachments: attachments.slice(0, 3),
+    attachments: attachments.slice(0, 4),
     webBrowsing: webBrowsingEnabled,
   };
 
@@ -540,19 +558,32 @@ async function deleteConversation(id) {
 
 function handleFiles(event) {
   const files = Array.from(event.target.files || []);
-  const available = Math.max(0, 3 - attachments.length);
+  const available = Math.max(0, 4 - attachments.length);
   const toAdd = files.slice(0, available);
   toAdd.forEach((file) => {
+    const isMarkdown = file.name.endsWith('.md') || file.name.endsWith('.markdown');
+    const isImage = file.type.startsWith('image/');
+
+    if (!isMarkdown && !isImage) {
+      return; // Skip unsupported files
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       attachments.push({
         name: file.name,
-        mime: file.type,
+        mime: file.type || (isMarkdown ? 'text/markdown' : 'application/octet-stream'),
         dataUrl: reader.result,
+        isMarkdown: isMarkdown,
       });
       renderAttachmentPreviews();
     };
-    reader.readAsDataURL(file);
+
+    if (isMarkdown) {
+      reader.readAsText(file);
+    } else {
+      reader.readAsDataURL(file);
+    }
   });
   event.target.value = '';
 }
@@ -566,7 +597,7 @@ function handlePaste(event) {
   if (!images.length) {
     return;
   }
-  const available = Math.max(0, 3 - attachments.length);
+  const available = Math.max(0, 4 - attachments.length);
   const toAdd = images.slice(0, available);
   toAdd.forEach((file) => {
     const reader = new FileReader();

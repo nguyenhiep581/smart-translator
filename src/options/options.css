@@ -413,6 +413,9 @@ body {
   padding: 8px 0;
   font-size: 14px;
   border-bottom: 1px solid var(--st-border-light);
+  /* Ensure emoji flags render properly on Windows */
+  font-family:
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', 'Apple Color Emoji', sans-serif;
 }
 
 .lang-list li:last-child {
