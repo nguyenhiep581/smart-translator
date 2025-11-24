@@ -24,11 +24,18 @@ export const OPENAI_MODELS = [
 
 export const CLAUDE_MODELS = [
   {
-    id: 'claude-sonnet-4-5-20250514',
+    id: 'claude-sonnet-4-5',
     name: 'Claude Sonnet 4.5',
     speed: 'fast',
     quality: 'excellent',
     default: true,
+  },
+  {
+    id: 'claude-haiku-3-5',
+    name: 'Claude Haiku 3.5',
+    speed: 'very fast',
+    quality: 'good',
+    default: false,
   },
 ];
 

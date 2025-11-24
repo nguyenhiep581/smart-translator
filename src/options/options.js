@@ -286,28 +286,14 @@ async function getAvailableModels(provider, buttonId) {
 
         if (models.length === 0) {
           // Fallback to preset list if API doesn't return models
-          models = [
-            'claude-sonnet-4-5-20250514',
-            'claude-haiku-3-5-20250320',
-            'claude-3-5-sonnet-20241022',
-            'claude-3-5-haiku-20241022',
-            'claude-3-opus-20240229',
-            'claude-3-sonnet-20240229',
-          ];
+          models = ['claude-sonnet-4-5', 'claude-haiku-3-5'];
         }
         updateModelSelect('claude-model', models, 'claude');
         showNotification(`Claude models: ${models.slice(0, 4).join(', ')}...`, 'success');
       } catch (err) {
         // Fallback to preset list if API call fails
         logError('Claude API models fetch failed, using preset:', err);
-        models = [
-          'claude-sonnet-4-5-20250514',
-          'claude-haiku-3-5-20250320',
-          'claude-3-5-sonnet-20241022',
-          'claude-3-5-haiku-20241022',
-          'claude-3-opus-20240229',
-          'claude-3-sonnet-20240229',
-        ];
+        models = ['claude-sonnet-4-5', 'claude-haiku-3-5'];
         updateModelSelect('claude-model', models, 'claude');
         showNotification('Claude models preset loaded (API unavailable)', 'info');
       }
@@ -505,7 +491,7 @@ async function loadSettingsUI() {
           claudeModelSelect.appendChild(option);
         });
       }
-      claudeModelSelect.value = settings.claude.model || 'claude-sonnet-4-5-20250514';
+      claudeModelSelect.value = settings.claude.model || 'claude-sonnet-4-5';
     }
 
     // Load Gemini settings (always load, even if not active provider)

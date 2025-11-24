@@ -590,7 +590,7 @@ function getDefaultModel(provider) {
   }
   switch (provider) {
     case 'claude':
-      return 'claude-sonnet-4-5-20250514';
+      return 'claude-sonnet-4-5';
     case 'gemini':
       return 'gemini-2.5-flash';
     case 'openai':
@@ -661,7 +661,7 @@ function populateModelSelect(provider, selected) {
     openai: providerModels.openai.length ? providerModels.openai : ['gpt-4o-mini', 'gpt-4o'],
     claude: providerModels.claude.length
       ? providerModels.claude
-      : ['claude-sonnet-4-5-20250514', 'claude-haiku-3-5-20250320', 'claude-3-5-sonnet-20241022'],
+      : ['claude-sonnet-4-5', 'claude-haiku-3-5'],
     gemini: providerModels.gemini.length ? providerModels.gemini : ['gemini-2.5-flash'],
   };
 

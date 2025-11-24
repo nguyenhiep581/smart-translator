@@ -18,7 +18,7 @@ export const DEFAULT_CONFIG = {
   // Claude settings
   claude: {
     apiKey: '',
-    model: 'claude-sonnet-4-5-20250514',
+    model: 'claude-sonnet-4-5',
     host: 'https://api.anthropic.com',
     path: '/v1/messages',
     temperature: 0.3,
