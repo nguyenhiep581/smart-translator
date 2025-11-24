@@ -133,7 +133,7 @@ class ChatClaude extends ClaudeTranslator {
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: conversation.model || this.config.model || 'claude-haiku-4-5-20251001',
+          model: conversation.model || this.config.model || 'claude-sonnet-4-5-20250514',
           max_tokens: conversation.maxTokens || this.config.maxTokens || 2048,
           temperature: this.config.temperature ?? 0.3,
           system: systemPrompt || '',
@@ -375,7 +375,7 @@ async function streamClaude(config, conversation, userMessage, onChunk, searchRe
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: conversation.model || config.claude.model || 'claude-haiku-4-5-20251001',
+      model: conversation.model || config.claude.model || 'claude-sonnet-4-5-20250514',
       max_tokens: conversation.maxTokens || config.claude.maxTokens || 2048,
       temperature: config.claude.temperature ?? 0.3,
       system: systemPrompt || '',

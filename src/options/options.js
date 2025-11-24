@@ -265,14 +265,52 @@ async function getAvailableModels(provider, buttonId) {
       updateModelSelect('openai-model', models, 'openai');
       showNotification(`OpenAI models: ${models.slice(0, 6).join(', ')}`, 'success');
     } else if (provider === 'claude') {
-      models = [
-        'claude-haiku-4-5-20251001',
-        'claude-3-opus-20240229',
-        'claude-3-sonnet-20240229',
-        'claude-3-haiku-20240307',
-      ];
-      updateModelSelect('claude-model', models, 'claude');
-      showNotification('Claude models preset loaded', 'success');
+      const host = document.getElementById('claude-host').value || 'https://api.anthropic.com';
+      const apiKey = document.getElementById('claude-api-key').value;
+      if (!apiKey) {
+        showNotification('Enter Claude API key first', 'error');
+        return;
+      }
+      try {
+        const response = await fetch(host.replace(/\/$/, '') + '/v1/models', {
+          headers: {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        models = (data.data || []).map((m) => m.id || m.name).filter(Boolean);
+
+        if (models.length === 0) {
+          // Fallback to preset list if API doesn't return models
+          models = [
+            'claude-sonnet-4-5-20250514',
+            'claude-haiku-3-5-20250320',
+            'claude-3-5-sonnet-20241022',
+            'claude-3-5-haiku-20241022',
+            'claude-3-opus-20240229',
+            'claude-3-sonnet-20240229',
+          ];
+        }
+        updateModelSelect('claude-model', models, 'claude');
+        showNotification(`Claude models: ${models.slice(0, 4).join(', ')}...`, 'success');
+      } catch (err) {
+        // Fallback to preset list if API call fails
+        logError('Claude API models fetch failed, using preset:', err);
+        models = [
+          'claude-sonnet-4-5-20250514',
+          'claude-haiku-3-5-20250320',
+          'claude-3-5-sonnet-20241022',
+          'claude-3-5-haiku-20241022',
+          'claude-3-opus-20240229',
+          'claude-3-sonnet-20240229',
+        ];
+        updateModelSelect('claude-model', models, 'claude');
+        showNotification('Claude models preset loaded (API unavailable)', 'info');
+      }
     } else if (provider === 'gemini') {
       const apiKey = document.getElementById('gemini-api-key').value;
       if (!apiKey) {
@@ -467,7 +505,7 @@ async function loadSettingsUI() {
           claudeModelSelect.appendChild(option);
         });
       }
-      claudeModelSelect.value = settings.claude.model || 'claude-haiku-4-5-20251001';
+      claudeModelSelect.value = settings.claude.model || 'claude-sonnet-4-5-20250514';
     }
 
     // Load Gemini settings (always load, even if not active provider)

@@ -508,8 +508,9 @@ async function handleGetAvailableModels(payload, sendResponse) {
         const defaults = {
           openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'],
           claude: [
-            'claude-haiku-4-5-20251001',
-            'claude-3-sonnet-20240229',
+            'claude-sonnet-4-5-20250514',
+            'claude-haiku-3-5-20250320',
+            'claude-3-5-sonnet-20241022',
             'claude-3-opus-20240229',
           ],
           gemini: ['gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro'],
