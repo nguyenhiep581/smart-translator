@@ -5,6 +5,15 @@
 import { loadSettings, saveSettings } from '../utils/storage.js';
 import { error as logError } from '../utils/logger.js';
 import { getTargetLanguages } from '../config/defaults.js';
+import {
+  CLAUDE_DEFAULT_MODEL,
+  CLAUDE_FALLBACK_MODEL,
+  GEMINI_DEFAULT_MODEL,
+  GEMINI_FALLBACK_MODEL,
+  DEFAULT_HOSTS,
+  DEFAULT_PATHS,
+} from '../config/constants.js';
+import { filterModelsByProvider } from '../config/providers.js';
 
 // Populate language dropdown
 function populateLanguageSelect() {
@@ -89,8 +98,8 @@ document.getElementById('save-provider')?.addEventListener('click', async () => 
       ...(config.openai || {}),
       apiKey: openaiApiKey,
       model: document.getElementById('openai-model').value,
-      host: document.getElementById('openai-host').value || 'https://api.openai.com',
-      path: document.getElementById('openai-path').value || '/v1/chat/completions',
+      host: document.getElementById('openai-host').value || DEFAULT_HOSTS.OPENAI,
+      path: document.getElementById('openai-path').value || DEFAULT_PATHS.OPENAI,
       availableModels:
         openaiModels.length > 0 ? openaiModels : config.openai?.availableModels || [],
     };
@@ -107,8 +116,8 @@ document.getElementById('save-provider')?.addEventListener('click', async () => 
       ...(config.claude || {}),
       apiKey: claudeApiKey,
       model: document.getElementById('claude-model').value,
-      host: document.getElementById('claude-host').value || 'https://api.anthropic.com',
-      path: document.getElementById('claude-path').value || '/v1/messages',
+      host: document.getElementById('claude-host').value || DEFAULT_HOSTS.CLAUDE,
+      path: document.getElementById('claude-path').value || DEFAULT_PATHS.CLAUDE,
       availableModels:
         claudeModels.length > 0 ? claudeModels : config.claude?.availableModels || [],
     };
@@ -124,7 +133,7 @@ document.getElementById('save-provider')?.addEventListener('click', async () => 
     config.gemini = {
       ...(config.gemini || {}),
       apiKey: geminiApiKey,
-      model: document.getElementById('gemini-model').value || 'gemini-2.0-flash-exp',
+      model: document.getElementById('gemini-model').value || GEMINI_DEFAULT_MODEL,
       availableModels:
         geminiModels.length > 0 ? geminiModels : config.gemini?.availableModels || [],
     };
@@ -195,9 +204,8 @@ async function testProviderConnection(provider, buttonId) {
     } else {
       const host = document.getElementById(`${provider}-host`)?.value || '';
       const path = document.getElementById(`${provider}-path`)?.value || '';
-      const defaultHost =
-        provider === 'openai' ? 'https://api.openai.com' : 'https://api.anthropic.com';
-      const defaultPath = provider === 'openai' ? '/v1/chat/completions' : '/v1/messages';
+      const defaultHost = provider === 'openai' ? DEFAULT_HOSTS.OPENAI : DEFAULT_HOSTS.CLAUDE;
+      const defaultPath = provider === 'openai' ? DEFAULT_PATHS.OPENAI : DEFAULT_PATHS.CLAUDE;
 
       config[provider] = {
         apiKey,
@@ -246,7 +254,7 @@ async function getAvailableModels(provider, buttonId) {
     let models = [];
 
     if (provider === 'openai') {
-      const host = document.getElementById('openai-host').value || 'https://api.openai.com';
+      const host = document.getElementById('openai-host').value || DEFAULT_HOSTS.OPENAI;
       const apiKey = document.getElementById('openai-api-key').value;
       if (!apiKey) {
         showNotification('Enter OpenAI API key first', 'error');
@@ -265,7 +273,7 @@ async function getAvailableModels(provider, buttonId) {
       updateModelSelect('openai-model', models, 'openai');
       showNotification(`OpenAI models: ${models.slice(0, 6).join(', ')}`, 'success');
     } else if (provider === 'claude') {
-      const host = document.getElementById('claude-host').value || 'https://api.anthropic.com';
+      const host = document.getElementById('claude-host').value || DEFAULT_HOSTS.CLAUDE;
       const apiKey = document.getElementById('claude-api-key').value;
       if (!apiKey) {
         showNotification('Enter Claude API key first', 'error');
@@ -286,14 +294,14 @@ async function getAvailableModels(provider, buttonId) {
 
         if (models.length === 0) {
           // Fallback to preset list if API doesn't return models
-          models = ['claude-sonnet-4-5', 'claude-haiku-3-5'];
+          models = [CLAUDE_DEFAULT_MODEL, CLAUDE_FALLBACK_MODEL];
         }
         updateModelSelect('claude-model', models, 'claude');
         showNotification(`Claude models: ${models.slice(0, 4).join(', ')}...`, 'success');
       } catch (err) {
         // Fallback to preset list if API call fails
         logError('Claude API models fetch failed, using preset:', err);
-        models = ['claude-sonnet-4-5', 'claude-haiku-3-5'];
+        models = [CLAUDE_DEFAULT_MODEL, CLAUDE_FALLBACK_MODEL];
         updateModelSelect('claude-model', models, 'claude');
         showNotification('Claude models preset loaded (API unavailable)', 'info');
       }
@@ -309,17 +317,12 @@ async function getAvailableModels(provider, buttonId) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       const data = await response.json();
-      models = (data.models || [])
-        .map((m) => (m.name || '').replace(/^models\//, ''))
-        .filter(
-          (name) =>
-            name &&
-            name.startsWith('gemini') &&
-            !name.toLowerCase().includes('embed') &&
-            !name.toLowerCase().includes('gecko'),
-        );
+      models = filterModelsByProvider(
+        'gemini',
+        (data.models || []).map((m) => (m.name || '').replace(/^models\//, '')),
+      );
       if (models.length === 0) {
-        models = ['gemini-2.5-flash', 'gemini-1.5-pro'];
+        models = [GEMINI_DEFAULT_MODEL, GEMINI_FALLBACK_MODEL];
       }
       updateModelSelect('gemini-model', models, 'gemini');
       showNotification(`Gemini models: ${models.slice(0, 6).join(', ')}`, 'success');

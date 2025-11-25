@@ -1,9 +1,14 @@
 import { getStorage, setStorage } from '../../utils/storage.js';
-import { OpenAITranslator } from '../translator/openAITranslator.js';
-import { ClaudeTranslator } from '../translator/claudeTranslator.js';
-import { GeminiTranslator } from '../translator/geminiTranslator.js';
-import { GoogleGenAI } from '@google/genai';
 import { error as logError } from '../../utils/logger.js';
+import { GoogleGenAI } from '@google/genai';
+import {
+  OPENAI_DEFAULT_MODEL,
+  GEMINI_DEFAULT_MODEL,
+  DEFAULT_HOSTS,
+  DEFAULT_PATHS,
+  CLAUDE_DEFAULT_MODEL,
+} from '../../config/constants.js';
+import { createChatProvider, normalizeOpenAIMessage } from './chatProviders.js';
 
 const CHAT_KEY = 'chatConversations';
 const SUMMARY_SYSTEM_PROMPT = `You are a conversation summarizer.
@@ -36,13 +41,12 @@ export async function deleteConversation(id) {
   await saveConversations(filtered);
 }
 
-export function createEmptyConversation(provider, model, systemPrompt = '', maxTokens = 2048) {
+export function createEmptyConversation(provider, systemPrompt = '', maxTokens = 2048) {
   const id = `chat_${Date.now()}`;
   return {
     id,
     title: 'New chat',
     provider,
-    model,
     systemPrompt,
     maxTokens,
     messages: [],
@@ -52,153 +56,10 @@ export function createEmptyConversation(provider, model, systemPrompt = '', maxT
 
 export async function sendChatMessage(config, conversation, userMessage) {
   await ensureSummaryIfNeeded(config, conversation, userMessage);
-  const translator = createTranslator(config, conversation.provider);
+  const translator = createChatProvider(config, conversation.provider);
   const { systemPrompt, messages } = buildChatPayload(conversation, userMessage);
   const response = await translator.chat(systemPrompt, messages, conversation);
   return response;
-}
-
-function createTranslator(config, provider) {
-  switch (provider) {
-    case 'openai':
-      return new ChatOpenAI(config.openai);
-    case 'claude':
-      return new ChatClaude(config.claude);
-    case 'gemini':
-      return new ChatGemini(config.gemini);
-    default:
-      throw new Error(`Unknown provider: ${provider}`);
-  }
-}
-
-class ChatOpenAI extends OpenAITranslator {
-  async chat(systemPrompt, messages, conversation) {
-    const host = this.config.host || 'https://api.openai.com';
-    const path = this.config.path || '/v1/chat/completions';
-    const endpoint = `${host}${path}`;
-    const bodyMessages = messages.map((m) => normalizeOpenAIMessage(m));
-    if (systemPrompt) {
-      bodyMessages.unshift({ role: 'system', content: systemPrompt });
-    }
-
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: conversation.model || this.config.model || 'gpt-4o-mini',
-          messages: bodyMessages,
-          temperature: this.config.temperature ?? 0.3,
-          max_tokens: conversation.maxTokens || this.config.maxTokens || 2048,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || `HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-      const content = data.choices?.[0]?.message?.content;
-      if (!content) {
-        throw new Error('Invalid response from OpenAI');
-      }
-      return content.trim();
-    } catch (err) {
-      logError('OpenAI chat error:', err);
-      throw err;
-    }
-  }
-}
-
-class ChatClaude extends ClaudeTranslator {
-  async chat(systemPrompt, messages, conversation) {
-    const host = this.config.host || 'https://api.anthropic.com';
-    const path = this.config.path || '/v1/messages';
-    const endpoint = `${host}${path}`;
-    const claudeMessages = messages.map((m) => ({
-      role: m.role === 'assistant' ? 'assistant' : 'user',
-      content: m.content,
-    }));
-
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.config.apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: conversation.model || this.config.model || 'claude-sonnet-4-5',
-          max_tokens: conversation.maxTokens || this.config.maxTokens || 2048,
-          temperature: this.config.temperature ?? 0.3,
-          system: systemPrompt || '',
-          messages: claudeMessages,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || `HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-      const content = data.content?.[0]?.text;
-      if (!content) {
-        throw new Error('Invalid response from Claude');
-      }
-      return content.trim();
-    } catch (err) {
-      logError('Claude chat error:', err);
-      throw err;
-    }
-  }
-}
-
-class ChatGemini extends GeminiTranslator {
-  async chat(systemPrompt, messages, conversation) {
-    const ai = new GoogleGenAI({ apiKey: this.config.apiKey });
-    const modelName = (conversation.model || this.config.model || 'gemini-2.0-flash-exp').replace(
-      /^models\//,
-      '',
-    );
-
-    const contents = messages.map((m) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }));
-
-    const generationConfig = {
-      temperature: this.config.temperature ?? 0.3,
-      maxOutputTokens: conversation.maxTokens || this.config.maxTokens || 2048,
-    };
-
-    try {
-      // Generate content with system instruction in config
-      const result = await ai.models.generateContent({
-        model: modelName,
-        contents,
-        config: {
-          ...generationConfig,
-          systemInstruction: systemPrompt ? [systemPrompt] : undefined,
-        },
-      });
-
-      const content = result.text;
-
-      if (!content) {
-        throw new Error('Invalid response from Gemini');
-      }
-      return content.trim();
-    } catch (err) {
-      logError('Gemini chat error:', err);
-      throw err;
-    }
-  }
 }
 
 export async function streamChatMessage(config, conversation, userMessage, onChunk, searchResults) {
@@ -250,8 +111,8 @@ function buildChatPayload(conversation, userMessage, searchResults) {
 }
 
 async function streamOpenAIStyle(config, conversation, userMessage, onChunk, searchResults) {
-  const host = config.openai.host || 'https://api.openai.com';
-  const path = config.openai.path || '/v1/chat/completions';
+  const host = config.openai.host || DEFAULT_HOSTS.OPENAI;
+  const path = config.openai.path || DEFAULT_PATHS.OPENAI;
   const endpoint = `${host}${path}`;
 
   const { systemPrompt, messages } = buildChatPayload(conversation, userMessage, searchResults);
@@ -268,7 +129,7 @@ async function streamOpenAIStyle(config, conversation, userMessage, onChunk, sea
       Authorization: `Bearer ${config.openai.apiKey}`,
     },
     body: JSON.stringify({
-      model: conversation.model || config.openai.model || 'gpt-4o-mini',
+      model: config.openai.model || conversation.model || OPENAI_DEFAULT_MODEL,
       messages: bodyMessages,
       temperature: config.openai.temperature ?? 0.3,
       max_tokens: conversation.maxTokens || config.openai.maxTokens || 2048,
@@ -327,10 +188,10 @@ async function streamGemini(config, conversation, userMessage, onChunk, searchRe
   const { systemPrompt, messages } = buildChatPayload(conversation, userMessage, searchResults);
 
   const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey });
-  const modelName = (conversation.model || config.gemini.model || 'gemini-2.5-flash')
+  const modelName = (config.gemini.model || conversation.model || GEMINI_DEFAULT_MODEL)
     .replace(/^models\//, '')
-    .replace(/^embedding-.*$/i, 'gemini-2.5-flash')
-    .replace(/gecko/i, 'gemini-2.5-flash');
+    .replace(/^embedding-.*$/i, GEMINI_DEFAULT_MODEL)
+    .replace(/gecko/i, GEMINI_DEFAULT_MODEL);
 
   const contents = messages.map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
@@ -370,8 +231,8 @@ async function streamGemini(config, conversation, userMessage, onChunk, searchRe
 }
 
 async function streamClaude(config, conversation, userMessage, onChunk, searchResults) {
-  const host = config.claude.host || 'https://api.anthropic.com';
-  const path = config.claude.path || '/v1/messages';
+  const host = config.claude.host || DEFAULT_HOSTS.CLAUDE;
+  const path = config.claude.path || DEFAULT_PATHS.CLAUDE;
   const endpoint = `${host}${path}`;
 
   const { systemPrompt, messages } = buildChatPayload(conversation, userMessage, searchResults);
@@ -388,7 +249,7 @@ async function streamClaude(config, conversation, userMessage, onChunk, searchRe
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: conversation.model || config.claude.model || 'claude-sonnet-4-5',
+      model: config.claude.model || conversation.model || CLAUDE_DEFAULT_MODEL,
       max_tokens: conversation.maxTokens || config.claude.maxTokens || 2048,
       temperature: config.claude.temperature ?? 0.3,
       system: systemPrompt || '',
@@ -446,31 +307,6 @@ async function streamClaude(config, conversation, userMessage, onChunk, searchRe
   return fullText.trim();
 }
 
-function normalizeOpenAIMessage(message) {
-  if (!message.attachments || message.attachments.length === 0) {
-    return message;
-  }
-
-  const parts = [{ type: 'text', text: message.content }];
-  message.attachments.slice(0, 4).forEach((att) => {
-    if (att.isMarkdown) {
-      // For markdown files, extract text content and append to message
-      const mdContent = att.dataUrl; // Text content for markdown
-      parts.push({
-        type: 'text',
-        text: `\n\n--- File: ${att.name} ---\n${mdContent}\n--- End of ${att.name} ---\n`,
-      });
-    } else {
-      // For images, use image_url
-      parts.push({
-        type: 'image_url',
-        image_url: { url: att.dataUrl },
-      });
-    }
-  });
-  return { role: message.role, content: parts };
-}
-
 function estimateTokens(messages) {
   const text = messages.map((m) => m.content || '').join(' ');
   return Math.ceil(text.length / 4); // rough heuristic
@@ -497,10 +333,9 @@ export async function ensureSummaryIfNeeded(config, conversation, userMessage) {
 }
 
 async function summarizeMessages(config, conversation, messages) {
-  const translator = createTranslator(config, conversation.provider);
+  const translator = createChatProvider(config, conversation.provider);
   const summarizerConversation = {
     ...conversation,
-    model: conversation.model,
     maxTokens: Math.min(conversation.maxTokens || 500, 500),
   };
   const response = await translator.chat(SUMMARY_SYSTEM_PROMPT, messages, summarizerConversation);

@@ -636,4 +636,14 @@ You will have successfully implemented the Smart Translator when:
 
 ---
 
+## **Commit Checklist for Agents**
+
+- Before committing, run local checks:
+- `pnpm run format` (or `pnpm run format:check`)
+- `pnpm run lint` (or `pnpm run lint:fix`)
+- `make build` (ensure the extension builds cleanly)
+- Husky/lint-staged will also run Prettier and ESLint on staged files; pre-running the commands above avoids hook failures.
+
+---
+
 **Good luck, Agent! 🚀**

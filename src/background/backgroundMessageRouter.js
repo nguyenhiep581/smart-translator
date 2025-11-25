@@ -19,6 +19,7 @@ import {
   ensureSummaryIfNeeded,
 } from './services/chatService.js';
 import { webSearchService } from './services/webSearchService.js';
+import { PROVIDER_DEFAULT_MODELS, filterModelsByProvider } from '../config/providers.js';
 
 const cacheService = new CacheService();
 
@@ -505,23 +506,12 @@ async function handleGetAvailableModels(payload, sendResponse) {
 
       if (!models.length) {
         // Use default models
-        const defaults = {
-          openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-          claude: ['claude-sonnet-4-5', 'claude-haiku-3-5'],
-          gemini: ['gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro'],
-        };
-        models = defaults[provider] || [];
+        models = PROVIDER_DEFAULT_MODELS[provider] || [];
       }
     }
 
     if (provider === 'gemini') {
-      models = models.filter(
-        (m) =>
-          m &&
-          m.startsWith('gemini') &&
-          !m.toLowerCase().includes('embed') &&
-          !m.toLowerCase().includes('gecko'),
-      );
+      models = filterModelsByProvider('gemini', models);
     }
 
     sendResponse({ success: true, models });

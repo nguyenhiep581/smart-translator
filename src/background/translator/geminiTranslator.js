@@ -7,6 +7,11 @@
 import { GoogleGenAI } from '@google/genai';
 import { BaseTranslator } from './baseTranslator.js';
 import { error as logError, debug } from '../../utils/logger.js';
+import {
+  GEMINI_DEFAULT_MODEL,
+  DEFAULT_TEMPERATURE,
+  DEFAULT_MAX_TOKENS,
+} from '../../config/constants.js';
 
 export class GeminiTranslator extends BaseTranslator {
   /**
@@ -27,12 +32,15 @@ export class GeminiTranslator extends BaseTranslator {
       const ai = new GoogleGenAI({ apiKey: this.config.apiKey });
 
       // Get model name (remove 'models/' prefix if present)
-      const modelName = this.config.model?.replace(/^models\//, '') || 'gemini-2.0-flash-exp';
+      const modelName = this.config.model?.replace(/^models\//, '') || GEMINI_DEFAULT_MODEL;
 
       // Prepare generation config with strict settings to prevent explanations
       const generationConfig = {
-        temperature: this.config.temperature ?? 0.3, // Lower temperature for more focused output
-        maxOutputTokens: this.config.maxTokens ?? 2048,
+        temperature:
+          this.config.temperature !== undefined
+            ? this.config.temperature
+            : DEFAULT_TEMPERATURE.gemini, // Lower temperature for more focused output
+        maxOutputTokens: this.config.maxTokens ?? DEFAULT_MAX_TOKENS.gemini,
         topP: 0.8, // Reduce randomness
         topK: 20, // More focused sampling
       };

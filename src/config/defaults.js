@@ -1,16 +1,25 @@
+import {
+  DEFAULT_PROVIDER,
+  OPENAI_DEFAULT_MODEL,
+  CLAUDE_DEFAULT_MODEL,
+  GEMINI_DEFAULT_MODEL,
+  DEFAULT_HOSTS,
+  DEFAULT_PATHS,
+} from './constants.js';
+
 /**
  * Default configuration for Smart Translator
  */
 export const DEFAULT_CONFIG = {
   // Provider settings
-  provider: 'openai',
+  provider: DEFAULT_PROVIDER,
 
   // OpenAI settings
   openai: {
     apiKey: '',
-    model: 'gpt-5.1',
-    host: 'https://api.openai.com',
-    path: '/v1/chat/completions',
+    model: OPENAI_DEFAULT_MODEL,
+    host: DEFAULT_HOSTS.OPENAI,
+    path: DEFAULT_PATHS.OPENAI,
     temperature: 0.3,
     maxTokens: 10000,
   },
@@ -18,9 +27,9 @@ export const DEFAULT_CONFIG = {
   // Claude settings
   claude: {
     apiKey: '',
-    model: 'claude-sonnet-4-5',
-    host: 'https://api.anthropic.com',
-    path: '/v1/messages',
+    model: CLAUDE_DEFAULT_MODEL,
+    host: DEFAULT_HOSTS.CLAUDE,
+    path: DEFAULT_PATHS.CLAUDE,
     temperature: 0.3,
     maxTokens: 10000,
   },
@@ -28,7 +37,7 @@ export const DEFAULT_CONFIG = {
   // Gemini settings
   gemini: {
     apiKey: '',
-    model: 'gemini-2.0-flash-exp',
+    model: GEMINI_DEFAULT_MODEL,
     temperature: 0.3,
     maxTokens: 10000,
   },

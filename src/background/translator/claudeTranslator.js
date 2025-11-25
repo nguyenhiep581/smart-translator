@@ -31,6 +31,13 @@
 
 import { BaseTranslator } from './baseTranslator.js';
 import { error as logError } from '../../utils/logger.js';
+import {
+  CLAUDE_DEFAULT_MODEL,
+  DEFAULT_HOSTS,
+  DEFAULT_PATHS,
+  DEFAULT_TEMPERATURE,
+  DEFAULT_MAX_TOKENS,
+} from '../../config/constants.js';
 
 export class ClaudeTranslator extends BaseTranslator {
   /**
@@ -56,8 +63,8 @@ export class ClaudeTranslator extends BaseTranslator {
       throw new Error('Claude API key not configured');
     }
 
-    const host = this.config.host || 'https://api.anthropic.com';
-    const path = this.config.path || '/v1/messages';
+    const host = this.config.host || DEFAULT_HOSTS.CLAUDE;
+    const path = this.config.path || DEFAULT_PATHS.CLAUDE;
     const endpoint = `${host}${path}`;
 
     try {
@@ -74,9 +81,12 @@ export class ClaudeTranslator extends BaseTranslator {
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: this.config.model || 'claude-3-sonnet-20240229',
-          max_tokens: this.config.maxTokens || 2048,
-          temperature: this.config.temperature || 0.3,
+          model: this.config.model || CLAUDE_DEFAULT_MODEL,
+          max_tokens: this.config.maxTokens || DEFAULT_MAX_TOKENS.claude,
+          temperature:
+            this.config.temperature !== undefined
+              ? this.config.temperature
+              : DEFAULT_TEMPERATURE.claude,
           system: this.buildSystemPrompt(to),
           messages: [
             {

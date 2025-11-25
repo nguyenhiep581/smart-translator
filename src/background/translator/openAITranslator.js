@@ -31,6 +31,13 @@
 
 import { BaseTranslator } from './baseTranslator.js';
 import { error as logError } from '../../utils/logger.js';
+import {
+  OPENAI_DEFAULT_MODEL,
+  DEFAULT_HOSTS,
+  DEFAULT_PATHS,
+  DEFAULT_TEMPERATURE,
+  DEFAULT_MAX_TOKENS,
+} from '../../config/constants.js';
 
 export class OpenAITranslator extends BaseTranslator {
   /**
@@ -65,8 +72,8 @@ export class OpenAITranslator extends BaseTranslator {
       throw new Error('OpenAI API key not configured');
     }
 
-    const host = this.config.host || 'https://api.openai.com';
-    const path = this.config.path || '/v1/chat/completions';
+    const host = this.config.host || DEFAULT_HOSTS.OPENAI;
+    const path = this.config.path || DEFAULT_PATHS.OPENAI;
     const endpoint = `${host}${path}`;
 
     try {
@@ -82,7 +89,7 @@ export class OpenAITranslator extends BaseTranslator {
           Authorization: `Bearer ${this.config.apiKey}`,
         },
         body: JSON.stringify({
-          model: this.config.model || 'gpt-4-turbo-preview',
+          model: this.config.model || OPENAI_DEFAULT_MODEL,
           messages: [
             {
               role: 'system',
@@ -93,8 +100,11 @@ export class OpenAITranslator extends BaseTranslator {
               content: text,
             },
           ],
-          temperature: this.config.temperature || 0.3,
-          max_tokens: this.config.maxTokens || 2048,
+          temperature:
+            this.config.temperature !== undefined
+              ? this.config.temperature
+              : DEFAULT_TEMPERATURE.openai,
+          max_tokens: this.config.maxTokens || DEFAULT_MAX_TOKENS.openai,
           stream: !!onStream,
         }),
       });

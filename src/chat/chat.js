@@ -1,4 +1,10 @@
 import { error as logError, debug } from '../utils/logger.js';
+import {
+  getDefaultModel,
+  filterModelsByProvider,
+  sanitizeModel,
+  PROVIDER_DEFAULT_MODELS,
+} from '../config/providers.js';
 import hljs from 'highlight.js/lib/common';
 import { marked } from 'marked';
 import katex from 'katex';
@@ -119,7 +125,7 @@ async function loadConfig() {
   providerModels = {
     openai: config.openai?.availableModels || [],
     claude: config.claude?.availableModels || [],
-    gemini: filterGeminiModels(config.gemini?.availableModels || []),
+    gemini: filterModelsByProvider('gemini', config.gemini?.availableModels || []),
   };
 
   enforceActiveProvider();
@@ -144,30 +150,6 @@ async function loadConfig() {
       providerModels[activeProvider].unshift(config.chatModel);
     }
   }
-}
-
-function filterGeminiModels(models) {
-  return (models || []).filter(
-    (m) =>
-      m &&
-      m.startsWith('gemini') &&
-      !m.toLowerCase().includes('embed') &&
-      !m.toLowerCase().includes('gecko'),
-  );
-}
-
-function sanitizeGeminiModel(model) {
-  if (!model) {
-    return 'gemini-2.5-flash';
-  }
-  if (
-    model.startsWith('gemini') &&
-    !model.toLowerCase().includes('embed') &&
-    !model.toLowerCase().includes('gecko')
-  ) {
-    return model.replace(/^models\//, '');
-  }
-  return 'gemini-2.5-flash';
 }
 
 function enforceActiveProvider() {
@@ -349,7 +331,6 @@ function bindEvents() {
       return;
     }
     const selected = modelSelect().value;
-    currentConversation.model = selected;
     await persistConversation();
     // Persist preferred chat model for future sessions/new chats
     const nextConfig = { ...(config || {}) };
@@ -381,10 +362,11 @@ function renderConversations() {
   filtered.forEach((c) => {
     const el = document.createElement('div');
     el.className = `conversation ${currentConversation?.id === c.id ? 'active' : ''}`;
+    const subtitle = c.summary || previewFromMessages(c);
     el.innerHTML = `
       <button class="delete-btn" title="Delete">&times;</button>
       <div class="conversation-title">${escapeHtml(c.title || 'Conversation')}</div>
-      <div class="conversation-meta">${c.model || ''}</div>
+      <div class="conversation-meta">${escapeHtml(subtitle || '')}</div>
     `;
     el.addEventListener('click', () => {
       setActiveConversation(c.id);
@@ -516,6 +498,16 @@ function renderAttachmentPreviews() {
   });
 }
 
+function previewFromMessages(conversation) {
+  const msgs = conversation?.messages || [];
+  const firstUser = msgs.find((m) => m.role === 'user');
+  if (!firstUser || !firstUser.content) {
+    return '';
+  }
+  const text = firstUser.content.replace(/\s+/g, ' ').trim();
+  return text.length > 80 ? `${text.slice(0, 80)}…` : text;
+}
+
 async function sendMessage() {
   if (!currentConversation) {
     return;
@@ -539,7 +531,6 @@ async function sendMessage() {
 
   if (currentConversation.provider !== activeProvider) {
     currentConversation.provider = activeProvider;
-    currentConversation.model = getDefaultModel(activeProvider);
   }
 
   if (activeProvider === 'gemini') {
@@ -694,22 +685,6 @@ function handlePaste(event) {
   event.preventDefault();
 }
 
-function getDefaultModel(provider) {
-  const models = providerModels[provider] || [];
-  if (models.length > 0) {
-    return models[0];
-  }
-  switch (provider) {
-    case 'claude':
-      return 'claude-sonnet-4-5';
-    case 'gemini':
-      return 'gemini-2.5-flash';
-    case 'openai':
-    default:
-      return 'gpt-4o-mini';
-  }
-}
-
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
@@ -766,21 +741,10 @@ function populateModelSelect(provider, selected) {
     chrome.storage.local.set({ config }).catch((err) => logError('Persist provider failed', err));
   }
 
-  // Sanitize gemini models and selected value
+  const models = getModelsForProvider(provider);
   if (provider === 'gemini') {
-    providerModels.gemini = filterGeminiModels(providerModels.gemini);
-    selected = sanitizeGeminiModel(selected);
+    selected = sanitizeModel('gemini', selected);
   }
-
-  const options = {
-    openai: providerModels.openai.length ? providerModels.openai : ['gpt-4o-mini', 'gpt-4o'],
-    claude: providerModels.claude.length
-      ? providerModels.claude
-      : ['claude-sonnet-4-5', 'claude-haiku-3-5'],
-    gemini: providerModels.gemini.length ? providerModels.gemini : ['gemini-2.5-flash'],
-  };
-
-  const models = options[provider] || [];
 
   const select = modelSelect();
   select.innerHTML = '';
@@ -806,6 +770,22 @@ function populateModelSelect(provider, selected) {
         .catch((err) => logError('Persist gemini model failed', err));
     }
   }
+}
+
+function getModelsForProvider(provider) {
+  const fromConfig = filterModelsByProvider(provider, providerModels[provider] || []);
+  const defaults = PROVIDER_DEFAULT_MODELS[provider] || [];
+  if (fromConfig.length) {
+    return fromConfig;
+  }
+  if (defaults.length) {
+    return defaults;
+  }
+  return [getDefaultModel(provider)];
+}
+
+function sanitizeGeminiModel(model) {
+  return sanitizeModel('gemini', model);
 }
 
 function disableModelSelect(message) {
