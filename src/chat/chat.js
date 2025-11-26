@@ -227,11 +227,24 @@ async function loadConversations() {
 
 async function createNewConversation() {
   try {
-    const provider = config.provider || 'openai';
-    const model =
-      config.chatModel && providerModels[provider]?.includes(config.chatModel)
-        ? config.chatModel
-        : getDefaultModel(provider);
+    const lastConvo = currentConversation || conversations[0];
+    const provider = lastConvo?.provider || config.provider || 'openai';
+
+    const availableModels = providerModels[provider] || [];
+    let model = lastConvo?.model;
+
+    if (!model || (provider === 'gemini' && !availableModels.includes(model))) {
+      if (config.chatModel && availableModels.includes(config.chatModel)) {
+        model = config.chatModel;
+      } else {
+        model = getDefaultModel(provider);
+      }
+    }
+
+    if (provider === 'gemini') {
+      model = sanitizeModel('gemini', model);
+    }
+
     const res = await chrome.runtime.sendMessage({
       type: 'chatCreate',
       payload: {
