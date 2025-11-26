@@ -820,7 +820,6 @@ function ensureChatProviderConfigured(options = {}) {
   const { openOptions = true, showError = true } = options;
   const provider = providerSelect()?.value || config?.provider || 'openai';
   const hasApiKey = isProviderConfigured(provider);
-  const sendBtn = document.getElementById('send-btn');
   setComposerEnabled(hasApiKey);
   if (!hasApiKey) {
     if (showError) {
