@@ -6,6 +6,7 @@ import { debug, error, initLogger } from '../utils/logger.js';
 import { getSelection } from '../utils/dom.js';
 import { showFloatingIcon, hideFloatingIcon } from './floatingIcon.js';
 import { isMiniPopupVisible, isExpandPanelOpen, showMiniPopup } from './miniPopup.js';
+import { startScreenshotTranslate } from './screenshotOverlay.js';
 
 let ctrlShortcutEnabled = false; // Default to disabled
 // Initialize logger with saved debug mode
@@ -121,4 +122,11 @@ function handleSelectionChange() {
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
   hideFloatingIcon();
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === 'startScreenshotTranslate') {
+    startScreenshotTranslate();
+    sendResponse?.({ success: true });
+  }
 });

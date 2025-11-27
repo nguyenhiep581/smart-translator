@@ -58,6 +58,16 @@ body {
   gap: 12px;
 }
 
+.btn-hint {
+  background: rgba(74, 144, 226, 0.12);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--st-text-primary);
+  border: 1px solid rgba(74, 144, 226, 0.25);
+  margin-left: 6px;
+}
+
 .popup-title {
   font-size: 20px;
   font-weight: 700;

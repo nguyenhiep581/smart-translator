@@ -61,6 +61,13 @@ chrome.commands.onCommand.addListener((command) => {
   } else if (command === 'open_chat') {
     const url = chrome.runtime.getURL('src/chat/chat.html');
     chrome.tabs.create({ url });
+  } else if (command === 'screenshot_translate') {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tab = tabs[0];
+      if (tab?.id) {
+        chrome.tabs.sendMessage(tab.id, { type: 'startScreenshotTranslate' });
+      }
+    });
   }
 });
 

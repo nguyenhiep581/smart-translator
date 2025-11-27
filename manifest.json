@@ -37,6 +37,13 @@
         "mac": "Alt+A"
       },
       "description": "Open Chat Window"
+    },
+    "screenshot_translate": {
+      "suggested_key": {
+        "default": "Alt+D",
+        "mac": "Alt+D"
+      },
+      "description": "Screenshot Translate"
     }
   },
   "content_scripts": [

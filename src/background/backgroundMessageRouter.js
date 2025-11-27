@@ -3,6 +3,7 @@
  */
 
 import { debug, error, initLogger } from '../utils/logger.js';
+import { GoogleGenAI } from '@google/genai';
 import { getStorage, setStorage } from '../utils/storage.js';
 import { OpenAITranslator } from './translator/openAITranslator.js';
 import { ClaudeTranslator } from './translator/claudeTranslator.js';
@@ -20,6 +21,13 @@ import {
 } from './services/chatService.js';
 import { webSearchService } from './services/webSearchService.js';
 import { PROVIDER_DEFAULT_MODELS, filterModelsByProvider } from '../config/providers.js';
+import {
+  DEFAULT_HOSTS,
+  DEFAULT_PATHS,
+  OPENAI_DEFAULT_MODEL,
+  GEMINI_DEFAULT_MODEL,
+  CLAUDE_DEFAULT_MODEL,
+} from '../config/constants.js';
 
 const cacheService = new CacheService();
 
@@ -34,6 +42,14 @@ export async function handleMessage(message, sender, sendResponse) {
     switch (message.type) {
       case 'translate':
         await handleTranslate(message.payload, sendResponse);
+        break;
+
+      case 'captureVisibleTab':
+        await handleCaptureVisibleTab(sender, sendResponse);
+        break;
+
+      case 'ocrAndTranslate':
+        await handleOcrAndTranslate(message.payload, sendResponse);
         break;
 
       case 'detectLanguage':
@@ -208,6 +224,261 @@ async function handleTranslate(payload, sendResponse) {
     error('Translation error:', err);
     sendResponse({ success: false, error: err.message });
   }
+}
+
+async function handleCaptureVisibleTab(sender, sendResponse) {
+  try {
+    const windowId = sender?.tab?.windowId;
+    const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: 'png' });
+    sendResponse({ success: true, dataUrl });
+  } catch (err) {
+    error('Capture error:', err);
+    sendResponse({ success: false, error: err.message || 'Capture failed' });
+  }
+}
+
+async function handleOcrAndTranslate(payload, sendResponse) {
+  const { imageBase64 } = payload || {};
+  if (!imageBase64) {
+    sendResponse({ success: false, error: 'No image provided' });
+    return;
+  }
+
+  try {
+    const { config } = await getStorage('config');
+    const ocrText = await extractTextWithProvider(imageBase64, config);
+
+    const to = config?.defaultToLang || 'vi';
+    const from = config?.defaultFromLang || 'auto';
+    const translator = createTranslator(config);
+
+    const cacheKey = await cacheService.generateKey(
+      config.provider,
+      translator.getModel(),
+      from,
+      to,
+      ocrText,
+    );
+
+    const cached = await cacheService.get(cacheKey);
+    if (cached) {
+      sendResponse({
+        success: true,
+        originalText: ocrText,
+        translatedText: cached,
+        fromCache: true,
+      });
+      return;
+    }
+
+    const translatedText = await translator.translate(ocrText, from, to);
+    await cacheService.set(cacheKey, translatedText);
+
+    sendResponse({
+      success: true,
+      originalText: ocrText,
+      translatedText,
+      fromCache: false,
+    });
+  } catch (err) {
+    error('OCR/translate error:', err);
+    sendResponse({ success: false, error: err.message });
+  }
+}
+
+async function extractTextWithProvider(imageBase64, config) {
+  const provider = resolveProvider(config);
+  switch (provider) {
+    case 'openai':
+      return extractWithOpenAI(imageBase64, config.openai);
+    case 'claude':
+      return extractWithClaude(imageBase64, config.claude);
+    case 'gemini':
+      return extractWithGemini(imageBase64, config.gemini);
+    default:
+      throw new Error(`OCR is not supported for provider "${provider}".`);
+  }
+}
+
+async function extractWithOpenAI(imageBase64, openaiConfig) {
+  if (!openaiConfig?.apiKey) {
+    throw new Error('OpenAI API key not configured for OCR');
+  }
+
+  const host = openaiConfig.host || DEFAULT_HOSTS.OPENAI;
+  const path = openaiConfig.path || DEFAULT_PATHS.OPENAI;
+  const endpoint = `${host}${path}`;
+  const model = openaiConfig.model || OPENAI_DEFAULT_MODEL;
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${openaiConfig.apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are an OCR engine. Extract all readable text from the provided image and return only the exact text content. Do not add explanations, labels, prefixes, or formatting beyond the raw text.',
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Return only the text visible in this image. No extra words or formatting.',
+            },
+            { type: 'image_url', image_url: { url: `data:image/png;base64,${imageBase64}` } },
+          ],
+        },
+      ],
+      temperature: 0,
+      max_tokens: 800,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || `OCR request failed (${response.status})`);
+  }
+
+  const data = await response.json();
+  const rawText = data?.choices?.[0]?.message?.content;
+  const text = cleanOcrText(rawText);
+  if (!text) {
+    error('OpenAI OCR response missing text', { data });
+    throw new Error('OCR response missing text');
+  }
+  return text;
+}
+
+async function extractWithClaude(imageBase64, claudeConfig) {
+  if (!claudeConfig?.apiKey) {
+    throw new Error('Claude API key not configured for OCR');
+  }
+  const model = claudeConfig.model || CLAUDE_DEFAULT_MODEL;
+
+  const host = claudeConfig.host || DEFAULT_HOSTS.CLAUDE;
+  const path = claudeConfig.path || DEFAULT_PATHS.CLAUDE;
+  const endpoint = `${host}${path}`;
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': claudeConfig.apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 800,
+      temperature: 0,
+      system:
+        'You are an OCR engine. Extract all readable text from the provided image and return only the exact text content. Do not add explanations, labels, prefixes, or formatting beyond the raw text.',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Return only the text visible in this image. No extra words or formatting.',
+            },
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: 'image/png',
+                data: imageBase64,
+              },
+            },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || `OCR request failed (${response.status})`);
+  }
+
+  const data = await response.json();
+  const rawText = data?.content?.[0]?.text;
+  const text = cleanOcrText(rawText);
+  if (!text) {
+    error('Claude OCR response missing text', { data });
+    throw new Error('OCR response missing text');
+  }
+  return text;
+}
+
+async function extractWithGemini(imageBase64, geminiConfig) {
+  if (!geminiConfig?.apiKey) {
+    throw new Error('Gemini API key not configured for OCR');
+  }
+
+  const modelName = normalizeGeminiModel(geminiConfig.model) || GEMINI_DEFAULT_MODEL;
+
+  const ai = new GoogleGenAI({ apiKey: geminiConfig.apiKey });
+  const response = await ai.models.generateContent({
+    model: modelName,
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          {
+            text: 'Return only the text visible in this image. No extra words, labels, or formatting.',
+          },
+          { inlineData: { mimeType: 'image/png', data: imageBase64 } },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: 800,
+    },
+  });
+
+  const payload = response?.response || response;
+  let text = '';
+
+  // Prefer direct text accessor if provided by SDK helper
+  if (payload?.text) {
+    text = typeof payload.text === 'function' ? payload.text() : payload.text;
+  }
+
+  // Fallback to first candidate parts
+  if (!text && payload?.candidates?.length) {
+    const parts = payload.candidates[0]?.content?.parts || [];
+    text = parts
+      .map((p) => p?.text)
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  text = cleanOcrText(text);
+  if (!text) {
+    error('Gemini OCR response missing text', { response });
+    throw new Error('OCR response missing text');
+  }
+  return text.trim();
+}
+
+function normalizeGeminiModel(model) {
+  if (!model) {
+    return '';
+  }
+  return model.replace(/^models\//, '');
+}
+
+function cleanOcrText(text) {
+  if (!text || typeof text !== 'string') {
+    return '';
+  }
+  return text.trim();
 }
 
 /**

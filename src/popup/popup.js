@@ -28,6 +28,22 @@ document.getElementById('open-chat').addEventListener('click', () => {
   chrome.tabs.create({ url });
 });
 
+document.getElementById('screenshot-translate').addEventListener('click', async () => {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) {
+      alert('No active tab to capture.');
+      return;
+    }
+    await chrome.tabs.sendMessage(tab.id, { type: 'startScreenshotTranslate' });
+    // Close popup to give the page focus for overlay interactions
+    window.close();
+  } catch (err) {
+    logError('Failed to start screenshot translate:', err);
+    alert('Could not start screenshot capture. Try reloading the page.');
+  }
+});
+
 // Open Chrome shortcuts page to set keyboard shortcut
 document.getElementById('open-shortcuts').addEventListener('click', () => {
   chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });

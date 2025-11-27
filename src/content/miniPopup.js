@@ -10,6 +10,7 @@ import { debug, error as logError } from '../utils/logger.js';
 let miniPopup = null;
 let currentTranslation = null;
 let expandPanel = null;
+let miniPopupOptions = { disableReplace: false, disableExpand: false };
 
 /**
  * Check if mini popup is currently visible
@@ -31,7 +32,16 @@ export function isExpandPanelOpen() {
  * Show mini popup with translation
  * @param {object} selection - Selection object
  */
-export async function showMiniPopup(selection) {
+export async function showMiniPopup(selection, options = {}) {
+  const {
+    presetTranslation = '',
+    disableReplace = false,
+    disableExpand = false,
+    allowHtml = false,
+    allowTranslationHtml = false,
+  } = options;
+  miniPopupOptions = { disableReplace, disableExpand };
+
   // Remove existing popup
   hideMiniPopup();
 
@@ -57,7 +67,7 @@ export async function showMiniPopup(selection) {
         ${generateLanguageOptions(defaultToLang)}
       </select>
     </div>
-    <div class="st-original">${escapeHtml(selection.text)}</div>
+    <div class="st-original">${allowHtml ? selection.text : escapeHtml(selection.text)}</div>
     <div class="st-translation">
       <div class="st-loading">
         <span class="st-spinner" aria-hidden="true"></span>
@@ -108,8 +118,15 @@ export async function showMiniPopup(selection) {
 
   document.body.appendChild(miniPopup);
 
-  // Start translation
-  translateText(selection);
+  if (presetTranslation) {
+    currentTranslation = presetTranslation;
+    const translationEl = miniPopup.querySelector('.st-translation');
+    translationEl.innerHTML = `<div class="st-translation-text">${allowTranslationHtml ? presetTranslation : escapeHtml(presetTranslation)}</div>`;
+    applyButtonStateAfterTranslate();
+  } else {
+    // Start translation
+    translateText(selection);
+  }
 }
 
 /**
@@ -121,7 +138,44 @@ export function hideMiniPopup() {
     miniPopup.parentNode.removeChild(miniPopup);
     miniPopup = null;
     currentTranslation = null;
+    miniPopupOptions = { disableReplace: false, disableExpand: false };
   }
+}
+
+export function showMiniPopupForText({
+  text,
+  rect,
+  translatedText = '',
+  disableReplace = false,
+  disableExpand = false,
+}) {
+  if (!text) {
+    return;
+  }
+  const selectionRect =
+    rect && typeof rect === 'object'
+      ? {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+        right: rect.left + rect.width,
+        bottom: rect.top + rect.height,
+      }
+      : null;
+  showMiniPopup(
+    {
+      text,
+      rect: selectionRect,
+    },
+    {
+      presetTranslation: translatedText,
+      disableReplace,
+      disableExpand,
+      allowHtml: true,
+      allowTranslationHtml: true,
+    },
+  );
 }
 
 /**
@@ -182,8 +236,7 @@ async function translateText(selection) {
           translationEl.innerHTML += '<div class="st-cache-indicator">⚡ From cache</div>';
         }
 
-        // Enable buttons
-        miniPopup.querySelectorAll('.st-btn').forEach((btn) => (btn.disabled = false));
+        applyButtonStateAfterTranslate();
 
         port.disconnect();
       } else if (response.type === 'error') {
@@ -287,5 +340,24 @@ function openExpandMode(selection) {
 function handleOutsideClick(event) {
   if (!event.target.closest('.smart-translator-mini-popup, .smart-translator-icon')) {
     hideMiniPopup();
+  }
+}
+
+function applyButtonStateAfterTranslate() {
+  if (!miniPopup) {
+    return;
+  }
+  const copyBtn = miniPopup.querySelector('.st-btn-copy');
+  const replaceBtn = miniPopup.querySelector('.st-btn-replace');
+  const expandBtn = miniPopup.querySelector('.st-btn-expand');
+
+  if (copyBtn) {
+    copyBtn.disabled = !currentTranslation;
+  }
+  if (replaceBtn) {
+    replaceBtn.disabled = miniPopupOptions.disableReplace;
+  }
+  if (expandBtn) {
+    expandBtn.disabled = miniPopupOptions.disableExpand;
   }
 }
