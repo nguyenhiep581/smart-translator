@@ -19,6 +19,7 @@ A high-performance Chrome Extension for AI-powered translation with DeepL-style 
 - 📊 **Analytics** - Track usage statistics (local only, no telemetry)
 - 🐛 **Debug Mode** - Toggle detailed console logging
 - 💬 **Chat Mode** - ChatGPT-style chat with history, model selection, up to 3 image attachments, streaming replies, and **Web Browsing** capabilities
+- 🗂️ **Backup & Restore** - Export/import settings and prompts as versioned JSON; API keys included only when explicitly selected
 
 ## 🚀 Quick Start
 
@@ -170,6 +171,9 @@ smart-translator/
    - TTL - Time to live (default: 7 days)
 5. **About**:
    - Enable Debug Mode for detailed logs
+6. **Backup & Restore**:
+   - Export/import full configuration and prompt templates as JSON
+   - Optionally include API keys; you must opt in for secrets on export/import
 
 ### Custom Endpoints
 

@@ -13,6 +13,7 @@ import {
 export const DEFAULT_CONFIG = {
   // Provider settings
   provider: DEFAULT_PROVIDER,
+  systemPrompt: '',
 
   // OpenAI settings
   openai: {
@@ -42,6 +43,13 @@ export const DEFAULT_CONFIG = {
     maxTokens: 10000,
   },
 
+  // Web search settings
+  webSearch: {
+    provider: 'ddg',
+    apiKey: '',
+    cx: '',
+  },
+
   // Language settings
   defaultFromLang: 'auto',
   defaultToLang: 'vi',
@@ -51,6 +59,10 @@ export const DEFAULT_CONFIG = {
   cacheEnabled: true,
   cacheTTL: 86400000, // 24 hours in milliseconds
   maxCacheEntries: 500,
+  cache: {
+    maxEntries: 500,
+    ttl: 86400000,
+  },
 
   // Language detection
   autoDetect: true,

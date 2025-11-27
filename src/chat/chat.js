@@ -22,6 +22,11 @@ let lastPendingMessage = null;
 let promptLibrary = [];
 let portReady = false;
 let webBrowsingEnabled = false;
+let promptFilter = '';
+let promptSelectionIndex = 0;
+let slashPromptVisible = false;
+let slashPromptFilter = '';
+let slashPromptIndex = 0;
 
 marked.setOptions({
   gfm: true,
@@ -250,7 +255,7 @@ async function createNewConversation() {
       payload: {
         provider,
         model,
-        systemPrompt: '',
+        systemPrompt: config.systemPrompt || '',
         maxTokens: 10000,
       },
     });
@@ -285,12 +290,39 @@ function bindEvents() {
 
   document.getElementById('send-btn').addEventListener('click', sendMessage);
   inputEl().addEventListener('keydown', (e) => {
+    if (slashPromptVisible) {
+      const matches = getSlashPromptMatches();
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        slashPromptIndex = Math.min(matches.length - 1, slashPromptIndex + 1);
+        renderSlashPromptSuggestions();
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        slashPromptIndex = Math.max(0, slashPromptIndex - 1);
+        renderSlashPromptSuggestions();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        applySlashPromptByIndex(slashPromptIndex);
+        return;
+      }
+      if (e.key === 'Escape') {
+        hideSlashPromptSuggestions();
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   });
+  inputEl().addEventListener('input', handleSlashPromptInput);
   inputEl().addEventListener('paste', handlePaste);
+  inputEl().addEventListener('blur', hideSlashPromptSuggestions);
 
   document.getElementById('attach-btn').addEventListener('click', () => {
     document.getElementById('file-input').click();
@@ -336,8 +368,33 @@ function bindEvents() {
 
   document.getElementById('prompts-backdrop').addEventListener('click', closePromptsModal);
   document.getElementById('close-prompts').addEventListener('click', closePromptsModal);
-  document.getElementById('prompts-close-btn').addEventListener('click', closePromptsModal);
   document.getElementById('prompt-save').addEventListener('click', savePrompt);
+  const promptSearch = document.getElementById('prompt-search');
+  if (promptSearch) {
+    promptSearch.addEventListener('input', (e) => {
+      promptFilter = e.target.value || '';
+      promptSelectionIndex = 0;
+      renderPromptList();
+    });
+    promptSearch.addEventListener('keydown', (e) => {
+      const filtered = getFilteredPrompts();
+      if (!filtered.length) {
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        promptSelectionIndex = Math.min(filtered.length - 1, promptSelectionIndex + 1);
+        renderPromptList();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        promptSelectionIndex = Math.max(0, promptSelectionIndex - 1);
+        renderPromptList();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        insertPromptIntoComposer(filtered[promptSelectionIndex]);
+      }
+    });
+  }
 
   modelSelect().addEventListener('change', async () => {
     if (!currentConversation) {
@@ -935,8 +992,15 @@ function handleStreamMessage(msg) {
 }
 
 function openPromptsModal() {
+  promptFilter = '';
+  promptSelectionIndex = 0;
   renderPromptList();
   document.getElementById('prompts-modal').classList.remove('modal-hidden');
+  const searchInput = document.getElementById('prompt-search');
+  if (searchInput) {
+    searchInput.value = '';
+    searchInput.focus();
+  }
 }
 
 function closePromptsModal() {
@@ -956,16 +1020,40 @@ async function savePrompt() {
   renderPromptList();
 }
 
+function getFilteredPrompts() {
+  const term = promptFilter.trim().toLowerCase();
+  if (!term) {
+    return promptLibrary;
+  }
+  return promptLibrary.filter((p) => p.title.toLowerCase().includes(term));
+}
+
+function clampSelection(max) {
+  if (max === 0) {
+    promptSelectionIndex = 0;
+    return;
+  }
+  if (promptSelectionIndex >= max) {
+    promptSelectionIndex = max - 1;
+  }
+  if (promptSelectionIndex < 0) {
+    promptSelectionIndex = 0;
+  }
+}
+
 function renderPromptList() {
   const list = document.getElementById('prompt-list');
   list.innerHTML = '';
-  if (!promptLibrary.length) {
-    list.innerHTML = '<div class="empty-state">No saved prompts</div>';
+  const filtered = getFilteredPrompts();
+  clampSelection(filtered.length);
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty-state">No matching prompts</div>';
     return;
   }
-  promptLibrary.forEach((p) => {
+  filtered.forEach((p, index) => {
     const item = document.createElement('div');
-    item.className = 'prompt-item';
+    item.className = `prompt-item${index === promptSelectionIndex ? ' selected' : ''}`;
     item.innerHTML = `
       <div class="prompt-title">${escapeHtml(p.title)}</div>
       <div class="prompt-text">${renderMarkdown(p.text)}</div>
@@ -974,7 +1062,11 @@ function renderPromptList() {
         <button class="btn btn-ghost btn-sm delete" data-id="${p.id}">Delete</button>
       </div>
     `;
-    item.querySelector('.apply').addEventListener('click', () => applyPrompt(p));
+    item.addEventListener('click', () => applyPrompt(p));
+    item.querySelector('.apply').addEventListener('click', (e) => {
+      e.stopPropagation();
+      applyPrompt(p);
+    });
     item.querySelector('.delete').addEventListener('click', async () => {
       promptLibrary = promptLibrary.filter((x) => x.id !== p.id);
       await chrome.storage.local.set({ chatPrompts: promptLibrary });
@@ -984,14 +1076,127 @@ function renderPromptList() {
   });
 }
 
-async function applyPrompt(p) {
-  if (!currentConversation) {
+function applyPrompt(p, options = {}) {
+  const { setComposer = true } = options;
+  if (setComposer) {
+    insertPromptIntoComposer(p);
+  }
+  closePromptsModal();
+  hideSlashPromptSuggestions();
+  updateSettingsButtons();
+}
+
+function applyPromptByIndex(index) {
+  const filtered = getFilteredPrompts();
+  if (!filtered.length || index < 0 || index >= filtered.length) {
     return;
   }
-  currentConversation.systemPrompt = p.text;
-  await persistConversation();
-  updateSettingsButtons();
+  applyPrompt(filtered[index]);
+}
+
+function insertPromptIntoComposer(prompt) {
+  const input = inputEl();
+  if (!input || !prompt?.text) {
+    return;
+  }
+  input.value = prompt.text;
+  const caret = prompt.text.length;
+  input.setSelectionRange(caret, caret);
+  input.focus();
   closePromptsModal();
+}
+
+function getSlashQuery() {
+  const value = inputEl().value;
+  const cursor = inputEl().selectionStart ?? value.length;
+  const sliced = value.slice(0, cursor);
+  // Only trigger when slash is the first non-space character
+  const match = sliced.match(/^\s*\/(\w*)$/);
+  if (!match) {
+    return null;
+  }
+  return match[1] || '';
+}
+
+function getSlashPromptMatches() {
+  const term = (slashPromptFilter || '').toLowerCase();
+  if (!term) {
+    return promptLibrary.slice(0, 20);
+  }
+  return promptLibrary.filter((p) => p.title.toLowerCase().includes(term)).slice(0, 20);
+}
+
+function hideSlashPromptSuggestions() {
+  slashPromptVisible = false;
+  const container = document.getElementById('prompt-suggestions');
+  if (container) {
+    container.style.display = 'none';
+    container.innerHTML = '';
+  }
+}
+
+function handleSlashPromptInput() {
+  const query = getSlashQuery();
+  if (query === null) {
+    hideSlashPromptSuggestions();
+    return;
+  }
+  slashPromptVisible = true;
+  slashPromptFilter = query;
+  slashPromptIndex = 0;
+  renderSlashPromptSuggestions();
+}
+
+function renderSlashPromptSuggestions() {
+  const container = document.getElementById('prompt-suggestions');
+  if (!container) {
+    return;
+  }
+  const matches = getSlashPromptMatches();
+  if (!matches.length) {
+    hideSlashPromptSuggestions();
+    return;
+  }
+  slashPromptIndex = Math.min(slashPromptIndex, matches.length - 1);
+  container.style.display = 'block';
+  container.innerHTML = matches
+    .map(
+      (p, idx) => `
+        <div class="prompt-suggestion-item ${idx === slashPromptIndex ? 'active' : ''}" data-id="${
+  p.id
+}">
+          <div class="title">${escapeHtml(p.title)}</div>
+          <div class="excerpt">${escapeHtml(p.text.slice(0, 140))}${p.text.length > 140 ? '…' : ''}</div>
+        </div>
+      `,
+    )
+    .join('');
+
+  Array.from(container.querySelectorAll('.prompt-suggestion-item')).forEach((el, idx) => {
+    el.addEventListener('click', () => {
+      applySlashPromptByIndex(idx);
+    });
+  });
+}
+
+function applySlashPromptByIndex(index) {
+  const matches = getSlashPromptMatches();
+  if (!matches.length || index < 0 || index >= matches.length) {
+    return;
+  }
+  // Remove the slash trigger from the input before applying
+  const input = inputEl();
+  const cursor = input.selectionStart ?? input.value.length;
+  const before = input.value.slice(0, cursor);
+  const after = input.value.slice(cursor);
+  const cleanedBefore = before.replace(/^\s*\/\w*$/, (match) => (match.startsWith(' ') ? ' ' : ''));
+  const promptText = matches[index].text || '';
+  const updated = `${cleanedBefore}${promptText}${after}`;
+  input.value = updated;
+  const caret = (cleanedBefore || '').length + promptText.length;
+  input.setSelectionRange(caret, caret);
+  input.focus();
+  applyPrompt(matches[index], { setComposer: false });
 }
 
 function renderError(message) {

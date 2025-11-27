@@ -256,6 +256,11 @@ You are a professional {targetLang} native translator who needs to fluently tran
 4. **Analytics**
    - Usage stats tracking
 
+5. **Backup & Restore**
+   - Export/import full configuration and prompts as versioned JSON
+   - Include API keys when explicitly chosen; warn before exporting secrets
+   - Validate imports and preview changes before applying
+
 ### **Side Panel**
 - Persistent translation workspace
 - Supports multi-language translation (planned/supported by UI)
@@ -291,6 +296,7 @@ You are a professional {targetLang} native translator who needs to fluently tran
 - [ ] Adjust cache settings
 - [ ] View analytics
 - [ ] **Test Web Search (DDG/Google)**
+- [ ] Test config export/import (with prompts, with and without API keys)
 
 #### **Edge Cases** (To Test)
 - [ ] Very long text (near 5000 char limit)
@@ -317,6 +323,7 @@ You are a professional {targetLang} native translator who needs to fluently tran
 - [ ] Test all features end-to-end
 - [ ] Fix any bugs found during testing
 - [ ] Implement error handling improvements
+- [x] Add configuration export/import (JSON with prompts, optional API keys, import validation)
 
 ### **Medium Priority**
 - [ ] Add keyboard shortcuts (Ctrl+Shift+T)

@@ -2,7 +2,12 @@
  * Options Page Script
  */
 
-import { loadSettings, saveSettings } from '../utils/storage.js';
+import {
+  exportConfigBundle,
+  importConfigBundle,
+  loadSettings,
+  saveSettings,
+} from '../utils/storage.js';
 import { error as logError } from '../utils/logger.js';
 import { getTargetLanguages } from '../config/defaults.js';
 import {
@@ -87,6 +92,7 @@ document.getElementById('save-provider')?.addEventListener('click', async () => 
   // Load existing config and merge with new settings
   const config = await loadSettings();
   config.provider = provider;
+  config.systemPrompt = document.getElementById('system-prompt').value.trim();
 
   // Save OpenAI settings from form if API key is present
   const openaiApiKey = document.getElementById('openai-api-key').value.trim();
@@ -435,6 +441,66 @@ document.getElementById('clear-cache')?.addEventListener('click', async () => {
   }
 });
 
+// Export/import configuration and prompts
+const importFileInput = document.getElementById('import-file-input');
+
+document.getElementById('export-config')?.addEventListener('click', async () => {
+  await handleExportConfig();
+});
+
+document.getElementById('import-config')?.addEventListener('click', () => {
+  importFileInput?.click();
+});
+
+importFileInput?.addEventListener('change', async (event) => {
+  await handleImportFile(event);
+});
+
+async function handleExportConfig() {
+  try {
+    const includeSecrets = document.getElementById('export-include-secrets')?.checked;
+    const bundle = await exportConfigBundle({ includeSecrets });
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `smart-translator-config-${new Date()
+      .toISOString()
+      .replace(/[:.]/g, '-')}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showNotification(
+      `Exported settings${includeSecrets ? ' (API keys included)' : ' (API keys excluded)'}`,
+      'success',
+    );
+  } catch (err) {
+    showNotification('Export failed: ' + err.message, 'error');
+  }
+}
+
+async function handleImportFile(event) {
+  const [file] = event?.target?.files || [];
+  if (!file) {
+    return;
+  }
+  try {
+    const allowSecrets = document.getElementById('import-allow-secrets')?.checked;
+    const text = await file.text();
+    await importConfigBundle(text, { allowSecrets });
+    showNotification(
+      `Import successful${allowSecrets ? ' (API keys applied)' : ' (API keys skipped)'}`,
+      'success',
+    );
+    await loadSettingsUI();
+  } catch (err) {
+    showNotification('Import failed: ' + err.message, 'error');
+  } finally {
+    if (event?.target) {
+      event.target.value = '';
+    }
+  }
+}
+
 // Save about settings (debug mode)
 document.getElementById('save-about')?.addEventListener('click', async () => {
   const debugMode = document.getElementById('debug-mode').checked;
@@ -524,9 +590,7 @@ async function loadSettingsUI() {
     }
 
     // System prompt
-    if (settings.systemPrompt) {
-      document.getElementById('system-prompt').value = settings.systemPrompt;
-    }
+    document.getElementById('system-prompt').value = settings.systemPrompt || '';
 
     // Web Search
     if (settings.webSearch) {

@@ -86,6 +86,7 @@
               placeholder="Type a message..."
               rows="3"
             ></textarea>
+            <div id="prompt-suggestions" class="prompt-suggestions" style="display: none"></div>
             <div class="composer-actions">
               <div class="composer-tools">
                 <button
@@ -168,25 +169,39 @@
             <h3>Prompt Library</h3>
             <button id="close-prompts" class="btn btn-ghost btn-sm">×</button>
           </div>
-          <div class="modal-body">
-            <div class="field">
-              <label>Title</label>
-              <input id="prompt-title" type="text" class="form-input" placeholder="Short name" />
+          <div class="modal-body prompts-grid">
+            <div class="prompt-column">
+              <div class="field">
+                <label>Title</label>
+                <input id="prompt-title" type="text" class="form-input" placeholder="Short name" />
+              </div>
+              <div class="field">
+                <label>Prompt</label>
+                <textarea
+                  id="prompt-text"
+                  class="form-textarea"
+                  rows="6"
+                  placeholder="Prompt text..."
+                ></textarea>
+              </div>
+              <div class="field">
+                <button id="prompt-save" class="btn btn-primary btn-sm" style="width: 100%">
+                  Save prompt
+                </button>
+              </div>
             </div>
-            <div class="field">
-              <label>Prompt</label>
-              <textarea
-                id="prompt-text"
-                class="form-textarea"
-                rows="4"
-                placeholder="Prompt text..."
-              ></textarea>
+            <div class="prompt-column">
+              <div class="field">
+                <label>Quick select</label>
+                <input
+                  id="prompt-search"
+                  type="text"
+                  class="form-input"
+                  placeholder="Type prompt title, Arrow keys to navigate, Enter to apply"
+                />
+              </div>
+              <div id="prompt-list" class="prompt-list"></div>
             </div>
-            <button id="prompt-save" class="btn btn-primary btn-sm">Save prompt</button>
-            <div id="prompt-list" class="prompt-list"></div>
-          </div>
-          <div class="modal-footer">
-            <button id="prompts-close-btn" class="btn btn-ghost btn-sm">Close</button>
           </div>
         </div>
       </div>

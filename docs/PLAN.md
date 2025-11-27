@@ -302,6 +302,7 @@ Other Features:
 - Keyboard shortcuts
 - TTL for cache
 - Debug logs toggle
+- Config backup/restore: JSON export/import for all settings and prompts (API keys optional/explicit)
 - Telemetry (local only)
 
 ---
