@@ -30,6 +30,7 @@ Start here if you're new to the project:
   - Component breakdown
   - Caching strategy
   - Build system
+- **[WORKFLOWS.md](./WORKFLOWS.md)** - End-to-end flows (inline translate, screenshot OCR, chat, sidepanel)
 
 ### **API Integration**
 

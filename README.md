@@ -10,6 +10,7 @@ A high-performance Chrome Extension for AI-powered translation with DeepL-style 
 ## ✨ Features
 
 - 🎯 **DeepL-style UI** - Floating icon and mini popup for instant translations
+- 📷 **Screenshot Translate** - Alt+D to select an area, OCR + auto-translate shown in the mini popup
 - 🤖 **Multi-Provider Support** - OpenAI, Claude, with custom endpoint capability
 - ⚡ **Two-Layer Cache** - Memory (LRU) + Persistent storage for blazing-fast repeated translations
 - 🌍 **Language Support** - Translate to/from English, Japanese, Vietnamese, Chinese
