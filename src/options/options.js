@@ -9,6 +9,7 @@ import {
   saveSettings,
 } from '../utils/storage.js';
 import { error as logError } from '../utils/logger.js';
+import { APP_VERSION } from '../utils/version.js';
 import { getTargetLanguages } from '../config/defaults.js';
 import {
   CLAUDE_DEFAULT_MODEL,
@@ -729,6 +730,11 @@ if (!document.getElementById('notification-styles')) {
     }
   `;
   document.head.appendChild(style);
+}
+
+const appVersionEl = document.querySelector('.app-version');
+if (appVersionEl) {
+  appVersionEl.textContent = `v${APP_VERSION}`;
 }
 
 // Initialize

@@ -5,6 +5,7 @@
 import { error as logError } from '../utils/logger.js';
 import { getTargetLanguages } from '../config/defaults.js';
 import { loadSettings, saveSettings } from '../utils/storage.js';
+import { APP_VERSION } from '../utils/version.js';
 
 // Populate language dropdowns
 function populateLanguageSelects() {
@@ -123,6 +124,11 @@ async function loadCacheStatus() {
     logError('Load cache status failed:', err);
     document.getElementById('cache-status').textContent = 'Enabled';
   }
+}
+
+const popupVersionEl = document.querySelector('.popup-version');
+if (popupVersionEl) {
+  popupVersionEl.textContent = `v${APP_VERSION}`;
 }
 
 // Initialize
