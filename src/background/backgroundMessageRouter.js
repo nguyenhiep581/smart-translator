@@ -31,6 +31,29 @@ import {
 
 const cacheService = new CacheService();
 
+function isNonTranslationOutput(text) {
+  if (!text || typeof text !== 'string') {
+    return true;
+  }
+  const lowered = text.toLowerCase();
+  const badIndicators = [
+    'translation:',
+    'translated',
+    'explanation',
+    'explain',
+    'summary',
+    'summarize',
+    'analysis',
+    'means',
+    'meaning',
+    'here is',
+    'original text',
+    'in english',
+    'in vietnamese',
+  ];
+  return badIndicators.some((k) => lowered.includes(k));
+}
+
 /**
  * Handle incoming messages
  * @param {object} message - Message object
@@ -158,11 +181,15 @@ export async function handleStreamingTranslation(message, port) {
     debug(`Streaming translation to ${config.provider} took ${duration}ms`);
 
     // Cache the result
-    await cacheService.set(cacheKey, fullText.trim());
+    let finalText = fullText.trim();
+    if (isNonTranslationOutput(finalText)) {
+      finalText = (await translator.translate(text, from, to))?.trim() || finalText;
+    }
+    await cacheService.set(cacheKey, finalText);
 
     port.postMessage({
       type: 'complete',
-      data: fullText.trim(),
+      data: finalText,
       fromCache: false,
       duration,
     });
@@ -206,7 +233,10 @@ async function handleTranslate(payload, sendResponse) {
 
     // Translate
     const startTime = Date.now();
-    const translation = await translator.translate(text, from, to);
+    let translation = await translator.translate(text, from, to);
+    if (isNonTranslationOutput(translation)) {
+      translation = await translator.translate(text, from, to);
+    }
     const duration = Date.now() - startTime;
 
     debug(`API call to ${config.provider} took ${duration}ms`);
@@ -272,12 +302,16 @@ async function handleOcrAndTranslate(payload, sendResponse) {
     }
 
     const translatedText = await translator.translate(ocrText, from, to);
-    await cacheService.set(cacheKey, translatedText);
+    let finalText = translatedText;
+    if (isNonTranslationOutput(finalText)) {
+      finalText = await translator.translate(ocrText, from, to);
+    }
+    await cacheService.set(cacheKey, finalText);
 
     sendResponse({
       success: true,
       originalText: ocrText,
-      translatedText,
+      translatedText: finalText,
       fromCache: false,
     });
   } catch (err) {

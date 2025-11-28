@@ -59,6 +59,7 @@ export async function showMiniPopup(selection, options = {}) {
   miniPopup = createElement('div', 'smart-translator-mini-popup');
   miniPopup.innerHTML = `
     <div class="st-header">
+      <button class="st-close" aria-label="Close">×</button>
       <select class="st-from-lang" disabled>
         <option value="auto">Auto Detect</option>
       </select>
@@ -111,6 +112,10 @@ export async function showMiniPopup(selection, options = {}) {
 
   miniPopup.querySelector('.st-btn-expand').addEventListener('click', () => {
     openExpandMode(selection);
+  });
+
+  miniPopup.querySelector('.st-close').addEventListener('click', () => {
+    hideMiniPopup();
   });
 
   // Close on click outside

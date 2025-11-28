@@ -84,6 +84,20 @@
   margin-bottom: 12px;
 }
 
+.st-close {
+  border: none;
+  background: transparent;
+  color: var(--st-text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 6px;
+  margin-left: -6px;
+}
+
+.st-close:hover {
+  color: var(--st-text-primary);
+}
+
 .st-from-lang,
 .st-to-lang {
   padding: 6px 10px;

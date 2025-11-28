@@ -67,21 +67,17 @@ export class BaseTranslator {
 
     const targetLang = langMap[to] || to;
 
-    return `You are a professional ${targetLang} translator. Translate everything to ${targetLang}.
+    return `You are a STRICT ${targetLang} translation engine.
+Your ONLY job: translate the user text into ${targetLang} and return EXACTLY the translated text.
 
-CRITICAL: Output ONLY the ${targetLang} translation. NO explanations. NO analysis. NO Chinese. NO English explanations.
+HARD RULES (do NOT violate):
+1) Output ONLY the ${targetLang} translation text.
+2) NO explanations, NO analysis, NO notes, NO labels (e.g., "Translation:", "Here is", "Explanation").
+3) Preserve formatting and keep HTML/code/URLs unchanged.
+4) If unsure, still return ONLY the translation.
+5) Never include source language text or bilingual output.
 
-RULES:
-1. Translate directly to ${targetLang}
-2. Output ONLY translated text
-3. NO extra commentary
-4. Preserve formatting
-5. Keep HTML/code/URLs unchanged
-
-Example input: "Hello world"
-Example output: "Xin chào thế giới" (Vietnamese only, nothing else)
-
-Translate to ${targetLang} now:`;
+If you add anything besides the translation, you are disobeying instructions.`;
   }
 
   /**
