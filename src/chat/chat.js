@@ -28,6 +28,53 @@ let slashPromptVisible = false;
 let slashPromptFilter = '';
 let slashPromptIndex = 0;
 
+const DEFAULT_CHAT_PROMPTS = [
+  {
+    id: 'prompt_translate_en',
+    title: 'Translate to English',
+    text: 'Translate the following text into natural, concise English. Preserve formatting and inline code. Do not add commentary.',
+  },
+  {
+    id: 'prompt_translate_ja',
+    title: 'Translate to Japanese',
+    text: 'Translate the following text into clear, natural Japanese. Keep technical terms in English if commonly used. No explanations.',
+  },
+  {
+    id: 'prompt_java_dev',
+    title: 'Java developer',
+    text: 'You are a senior Java developer. Propose idiomatic Java solutions (Java 17+), prefer readability, and explain only when necessary.',
+  },
+  {
+    id: 'prompt_react_dev',
+    title: 'React developer',
+    text: 'You are a pragmatic React developer. Suggest React/TypeScript solutions, functional components, hooks, and minimal dependencies.',
+  },
+  {
+    id: 'prompt_devops',
+    title: 'DevOps',
+    text: 'You are a DevOps engineer. Provide practical commands/config for CI/CD, containers, Kubernetes, networking, and observability.',
+  },
+  {
+    id: 'prompt_architecture',
+    title: 'Architecture',
+    text: 'You are a software architect. Propose simple, scalable designs. Call out trade-offs, data flow, and failure handling briefly.',
+  },
+  {
+    id: 'prompt_estimation',
+    title: 'Estimation',
+    text: 'Estimate implementation effort. List assumptions, risks, and give a rough time/complexity breakdown with confidence level.',
+  },
+];
+
+const PROVIDER_SYSTEM_DEFAULTS = {
+  claude:
+    'You are a helpful AI assistant. Respond concisely and directly. Prefer clear bullet points when listing items. Include code or examples only when they add clarity.',
+  gemini:
+    'You are a helpful AI assistant. Answer succinctly and stay on topic. Provide practical steps or short examples when useful, but keep responses tight.',
+};
+
+const getProviderSystemPrompt = (provider) => PROVIDER_SYSTEM_DEFAULTS[provider] || '';
+
 marked.setOptions({
   gfm: true,
   breaks: true,
@@ -125,7 +172,17 @@ function ensurePort() {
 async function loadConfig() {
   const res = await chrome.storage.local.get(['config', 'chatPrompts']);
   config = res.config || {};
-  promptLibrary = res.chatPrompts || [];
+  const storedPrompts = Array.isArray(res.chatPrompts) ? res.chatPrompts : [];
+  const missingDefaults = DEFAULT_CHAT_PROMPTS.filter(
+    (p) => !storedPrompts.some((sp) => sp.id === p.id),
+  );
+  promptLibrary =
+    storedPrompts.length === 0 ? DEFAULT_CHAT_PROMPTS : [...storedPrompts, ...missingDefaults];
+  if (missingDefaults.length || storedPrompts.length === 0) {
+    chrome.storage.local.set({ chatPrompts: promptLibrary }).catch((err) => {
+      logError('Failed to seed default prompts', err);
+    });
+  }
 
   providerModels = {
     openai: config.openai?.availableModels || [],
@@ -223,7 +280,12 @@ async function loadConversations() {
   try {
     const res = await chrome.runtime.sendMessage({ type: 'chatList' });
     if (res.success) {
-      conversations = res.data || [];
+      conversations =
+        res.data?.map((c) => {
+          const maxNum = Number(c.maxTokens);
+          const safeMax = Number.isFinite(maxNum) ? maxNum : 10000;
+          return { ...c, maxTokens: safeMax };
+        }) || [];
     }
   } catch (err) {
     logError('Failed to load conversations', err);
@@ -250,12 +312,13 @@ async function createNewConversation() {
       model = sanitizeModel('gemini', model);
     }
 
+    const systemPrompt = config.systemPrompt || getProviderSystemPrompt(provider);
     const res = await chrome.runtime.sendMessage({
       type: 'chatCreate',
       payload: {
         provider,
         model,
-        systemPrompt: config.systemPrompt || '',
+        systemPrompt,
         maxTokens: 10000,
       },
     });
@@ -483,6 +546,7 @@ function renderMessages() {
     row.className = `msg ${m.role}`;
     const rendered = renderMarkdown(m.content || '');
     const isEmpty = !m.content || m.content.trim() === '';
+    const messageText = m.content || '';
 
     // Always show 🤖 for assistant, 🧑 for user (no loading spinner)
     const badge = m.role === 'assistant' ? '🤖' : '🧑';
@@ -491,6 +555,48 @@ function renderMessages() {
       <div class="role" title="${m.role}">${badge}</div>
       <div class="bubble markdown-body">${rendered || (isEmpty ? '<div class="loading-dots">Thinking...</div>' : '')}</div>
     `;
+
+    if (m.role === 'assistant') {
+      const actions = document.createElement('div');
+      actions.className = 'message-actions';
+      actions.innerHTML = `
+        <button class="action-btn copy" aria-label="Copy message" title="Copy">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"></path>
+          </svg>
+        </button>
+        <button class="action-btn quote" aria-label="Quote message" title="Quote">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path d="M7 7h6v2H9v6H7V7zm8 0h6v2h-4v6h-2V7z" fill="currentColor"></path>
+          </svg>
+        </button>
+      `;
+      const copyBtn = actions.querySelector('.copy');
+      const quoteBtn = actions.querySelector('.quote');
+      copyBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        try {
+          await navigator.clipboard.writeText(messageText);
+        } catch (err) {
+          logError('Copy message failed', err);
+        }
+      });
+      quoteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const input = inputEl();
+        if (!input) {
+          return;
+        }
+        input.value = messageText;
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+        updateSendAvailability();
+      });
+      const bubbleEl = row.querySelector('.bubble');
+      if (bubbleEl) {
+        bubbleEl.appendChild(actions);
+      }
+    }
     messagesEl().appendChild(row);
   });
   messagesEl().scrollTop = messagesEl().scrollHeight;
@@ -607,6 +713,11 @@ async function sendMessage() {
     currentConversation.model = sanitizeGeminiModel(currentConversation.model);
   }
 
+  if (!currentConversation.systemPrompt) {
+    const fallbackPrompt = getProviderSystemPrompt(activeProvider);
+    currentConversation.systemPrompt = fallbackPrompt;
+  }
+
   if (!ensurePort()) {
     renderError('Connection lost. Retrying...');
     connectStreamPort();
@@ -627,6 +738,9 @@ async function sendMessage() {
     ...currentConversation,
     messages: [...(currentConversation.messages || [])],
   };
+  if (!convoForSend.systemPrompt) {
+    convoForSend.systemPrompt = getProviderSystemPrompt(activeProvider);
+  }
 
   // UI-only optimistic placeholder
   const uiConversation = {
@@ -1269,7 +1383,8 @@ function updateSettingsButtons() {
     sysBtn.textContent = hasPrompt ? '🧠 System prompt (set)' : '🧠 System prompt';
   }
   if (maxBtn) {
-    const max = currentConversation?.maxTokens || 10000;
+    const maxValue = Number(currentConversation?.maxTokens);
+    const max = Number.isFinite(maxValue) ? maxValue : 10000;
     maxBtn.textContent = `🧮 Max tokens (${max})`;
   }
 }

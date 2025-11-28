@@ -41,12 +41,13 @@ export async function deleteConversation(id) {
   await saveConversations(filtered);
 }
 
-export function createEmptyConversation(provider, systemPrompt = '', maxTokens = 2048) {
+export function createEmptyConversation(provider, model = '', systemPrompt = '', maxTokens = 2048) {
   const id = `chat_${Date.now()}`;
   return {
     id,
     title: 'New chat',
     provider,
+    model,
     systemPrompt,
     maxTokens,
     messages: [],
