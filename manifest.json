@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Smart Translator",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Translate selected text or screenshots with AI (OpenAI, Claude, custom) via inline UI.",
   "author": "nguyenhiep",
   "permissions": ["storage", "activeTab", "scripting", "sidePanel", "contextMenus"],

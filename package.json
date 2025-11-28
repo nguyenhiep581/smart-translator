@@ -1,6 +1,6 @@
 {
   "name": "smart-translator",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Chrome Extension for translating selected text or screenshots using OpenAI, Claude, or custom AI providers",
   "type": "module",
   "scripts": {
