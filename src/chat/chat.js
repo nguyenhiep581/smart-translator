@@ -552,10 +552,9 @@ function updateLastMessage(content) {
   const roleIcon = lastMsgRow?.querySelector('.role');
 
   if (lastMsg) {
-    // During streaming: show plain text only (no markdown rendering)
-    // Use textContent for instant, flicker-free updates
-    lastMsg.textContent = content || '';
-    lastMsg.style.whiteSpace = 'pre-wrap';
+    // Render markdown during streaming to handle <think> blocks and formatting
+    lastMsg.innerHTML = renderMarkdown(content || '');
+    lastMsg.style.whiteSpace = '';
 
     // Update icon: if content exists, show 🤖, otherwise keep loading spinner
     if (roleIcon && content && content.trim()) {
@@ -1536,40 +1535,15 @@ function renderMarkdown(text) {
     return '';
   }
 
-  // Handle <think> blocks
-  let processedText = text;
-  const thinkMatch = text.match(/<think>([\s\S]*?)<\/think>/i);
+  // Handle <think> blocks (including partial ones for streaming)
+  const processedText = text;
+  // Match <think>... optionally closed by </think>
+  const thinkMatch = text.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
+
   if (thinkMatch) {
     const thinkingContent = thinkMatch[1].trim();
-    const thinkingHtml = `<details class="thinking-process"><summary>Thinking Process</summary><div class="thinking-content">${marked.parse(thinkingContent)}</div></details>`;
-    processedText = text.replace(/<think>[\s\S]*?<\/think>/i, thinkingHtml);
-  }
-
-  const normalized = normalizeCodeFences(processedText);
-  const { replaced, mathBlocks } = protectMath(normalized);
-  const parsed = marked.parse(replaced);
-
-  let restored = parsed;
-  mathBlocks.forEach(({ placeholder, content, display }) => {
-    const html = renderMath(content, display);
-    restored = restored.replaceAll(placeholder, html);
-  });
-
-  const temp = document.createElement('div');
-  temp.innerHTML = restored;
-
-  // Fix double rendering of thinking block if marked parsed it again
-  const details = temp.querySelector('details.thinking-process');
-  if (details) {
-    // The thinking block was already HTML, so marked might have escaped it or wrapped it.
-    // However, since we replaced it in the text before marked, marked might treat it as HTML (if enabled) or text.
-    // Let's adjust the logic: strip the think block, render it separately, then prepend.
-  }
-
-  // New Logic: Strip think block, render main text, then prepend think block UI
-  if (thinkMatch) {
-    const thinkingContent = thinkMatch[1].trim();
-    const mainText = text.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
+    // Remove the think block from the main text
+    const mainText = text.replace(/<think>[\s\S]*?(?:<\/think>|$)/i, '').trim();
 
     const normalizedMain = normalizeCodeFences(mainText);
     const { replaced: replacedMain, mathBlocks: mathBlocksMain } = protectMath(normalizedMain);
@@ -1581,20 +1555,52 @@ function renderMarkdown(text) {
       restoredMain = restoredMain.replaceAll(placeholder, html);
     });
 
-    temp.innerHTML = `<details class="thinking-process"><summary>Thinking Process</summary><div class="thinking-content">${marked.parse(thinkingContent)}</div></details>${restoredMain}`;
-  } else {
-    // Original logic
-    const normalized = normalizeCodeFences(text);
-    const { replaced, mathBlocks } = protectMath(normalized);
-    const parsed = marked.parse(replaced);
+    const temp = document.createElement('div');
+    // Only show thinking block if there is content
+    if (thinkingContent) {
+      temp.innerHTML = `<details class="thinking-process"><summary>Thinking Process</summary><div class="thinking-content">${marked.parse(thinkingContent)}</div></details>${restoredMain}`;
+    } else {
+      temp.innerHTML = restoredMain;
+    }
 
-    let restored = parsed;
-    mathBlocks.forEach(({ placeholder, content, display }) => {
-      const html = renderMath(content, display);
-      restored = restored.replaceAll(placeholder, html);
+    // Code block highlighting logic...
+    temp.querySelectorAll('pre code').forEach((codeEl) => {
+      if (!codeEl.classList.contains('hljs')) {
+        codeEl.classList.add('hljs');
+      }
+      const wrapper = document.createElement('div');
+      wrapper.className = 'code-block';
+      const pre = codeEl.parentElement;
+      if (pre && pre.parentElement) {
+        pre.parentElement.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.textContent = 'Copy';
+        copyBtn.dataset.code = codeEl.textContent || '';
+        wrapper.appendChild(copyBtn);
+      }
     });
-    temp.innerHTML = restored;
+    temp.querySelectorAll('a').forEach((a) => {
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+    });
+    return temp.innerHTML;
   }
+
+  // Original logic for non-think text
+  const normalized = normalizeCodeFences(text);
+  const { replaced, mathBlocks } = protectMath(normalized);
+  const parsed = marked.parse(replaced);
+
+  let restored = parsed;
+  mathBlocks.forEach(({ placeholder, content, display }) => {
+    const html = renderMath(content, display);
+    restored = restored.replaceAll(placeholder, html);
+  });
+
+  const temp = document.createElement('div');
+  temp.innerHTML = restored;
 
   temp.querySelectorAll('pre code').forEach((codeEl) => {
     // Code is already highlighted by marked, just add hljs class for styling
