@@ -496,6 +496,7 @@ function bindEvents() {
       return;
     }
     const selected = modelSelect().value;
+    currentConversation.model = selected;
     await persistConversation();
     // Persist preferred chat model for future sessions/new chats
     const nextConfig = { ...(config || {}) };
