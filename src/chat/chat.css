@@ -206,6 +206,11 @@ body {
   font-size: 12px;
   color: var(--muted-light);
   text-align: left;
+  max-height: 34px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .conversation .delete-btn {
@@ -417,16 +422,16 @@ body {
 
 .message-actions {
   position: absolute;
-  right: 6px;
-  bottom: 6px;
   display: flex;
   gap: 6px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
+  right: 6px;
+  bottom: 8px;
 }
 
-.msg.assistant:hover .message-actions {
+.msg:hover .message-actions {
   opacity: 1;
   pointer-events: auto;
 }
@@ -451,6 +456,19 @@ body {
   border-color: var(--border-strong);
   background: #fff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.message-meta {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.02);
+}
+
+.bubble.has-actions {
+  padding-bottom: 48px;
 }
 
 .msg.user {
@@ -693,7 +711,7 @@ body {
 }
 
 #web-search-btn {
-  display: none;
+  display: inline-flex;
 }
 
 .btn-icon-only {
@@ -886,6 +904,32 @@ body {
   border-radius: var(--radius);
   cursor: pointer;
   font-weight: 600;
+}
+
+.retry-preview {
+  display: block;
+  max-width: 60%;
+  font-size: 12px;
+  color: #7f1d1d;
+  background: #ffe4e6;
+  border: 1px solid #fecdd3;
+  padding: 4px 6px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-status {
+  background: #e0f2fe;
+  color: #075985;
+  border: 1px solid #bae6fd;
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .modal-hidden {

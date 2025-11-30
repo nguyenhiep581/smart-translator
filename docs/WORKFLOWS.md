@@ -82,6 +82,23 @@ Developer-facing descriptions of how major user flows work and where to look in 
 - Frontend: `src/chat/chat.js`, `src/chat/chat.html`, `src/chat/chat.css`
 - Background: `src/background/backgroundMessageRouter.js` (chat handlers)
 
+### Web Browsing / Search & Crawl Protocol
+- Toggle: chat UI web browsing button. When enabled, chat payload includes `webBrowsing: true`.
+- Background (`handleChatStream`) runs `runSearchCrawlProtocol` before streaming to the LLM:
+  - LLM-style analysis of the user message to understand intent → derive keywords, subtopics, and whether explicit URLs need crawling.
+  - Builds a search plan (extract URLs to crawl first; derive focused search queries from the intent/keywords).
+  - Crawls explicit URLs first.
+  - Runs DuckDuckGo searches for planned queries; formats top results; may crawl the top result for deeper context.
+  - Skips obvious error pages (404/forbidden/not found) and trims content size.
+  - Assembles all collected context into a single string and injects into the user message for the LLM.
+  - Emits `chatStreamStatus` messages for progress; UI shows a status banner via `chat.js`/`chat.css`.
+- Streaming then proceeds normally (OpenAI/Claude/Gemini); translation flows are unchanged.
+
+**Search Plan Prompt (internal)**
+- Build queries from user intent, not a raw copy of the message.
+- Use keywords and subtopics from the message; if URLs are present, crawl them first.
+- Order: broad → narrow → verify. Limit to a few focused queries.
+
 ---
 
 ## Sidepanel Chat
@@ -116,4 +133,3 @@ Developer-facing descriptions of how major user flows work and where to look in 
 - Alt+D: Screenshot Translate.
 - Alt+A: Open Chat (popup).
 - Alt+S: Toggle sidepanel.
-

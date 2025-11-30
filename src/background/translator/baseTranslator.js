@@ -13,7 +13,7 @@
  * @property {string} config.model - Model identifier (e.g., 'gpt-4', 'claude-3-sonnet')
  * @property {string} [config.host] - API host URL (for custom endpoints)
  * @property {string} [config.path] - API path (for custom endpoints)
- * @property {number} [config.temperature=0.3] - Sampling temperature (0-1)
+ * @property {number} [config.temperature=0.2] - Sampling temperature (0-1)
  * @property {number} [config.maxTokens=2048] - Maximum tokens to generate
  *
  * @example

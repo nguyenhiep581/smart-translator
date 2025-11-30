@@ -187,9 +187,6 @@ function stripSecrets(config) {
       delete cloned[provider].apiKey;
     }
   });
-  if (cloned.webSearch && cloned.webSearch.apiKey !== undefined) {
-    delete cloned.webSearch.apiKey;
-  }
   return cloned;
 }
 

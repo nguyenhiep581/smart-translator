@@ -1,12 +1,17 @@
 import { getStorage, setStorage } from '../../utils/storage.js';
 import { error as logError } from '../../utils/logger.js';
 import { GoogleGenAI } from '@google/genai';
+import { saveEmbedding, searchSimilar, formatSemanticRecall } from './memoryService.js';
 import {
   OPENAI_DEFAULT_MODEL,
   GEMINI_DEFAULT_MODEL,
   DEFAULT_HOSTS,
   DEFAULT_PATHS,
   CLAUDE_DEFAULT_MODEL,
+  DEFAULT_CHAT_TEMPERATURE,
+  DEFAULT_TRANSLATION_TEMPERATURE,
+  DEFAULT_CHAT_MAX_TOKENS,
+  DEFAULT_MAX_TOKENS,
 } from '../../config/constants.js';
 import { createChatProvider, normalizeOpenAIMessage } from './chatProviders.js';
 
@@ -41,7 +46,13 @@ export async function deleteConversation(id) {
   await saveConversations(filtered);
 }
 
-export function createEmptyConversation(provider, model = '', systemPrompt = '', maxTokens = 2048) {
+export function createEmptyConversation(
+  provider,
+  model = '',
+  systemPrompt = '',
+  maxTokens = DEFAULT_CHAT_MAX_TOKENS,
+  temperature = DEFAULT_CHAT_TEMPERATURE,
+) {
   const id = `chat_${Date.now()}`;
   return {
     id,
@@ -50,6 +61,7 @@ export function createEmptyConversation(provider, model = '', systemPrompt = '',
     model,
     systemPrompt,
     maxTokens,
+    temperature,
     messages: [],
     updatedAt: Date.now(),
   };
@@ -58,8 +70,10 @@ export function createEmptyConversation(provider, model = '', systemPrompt = '',
 export async function sendChatMessage(config, conversation, userMessage) {
   await ensureSummaryIfNeeded(config, conversation, userMessage);
   const translator = createChatProvider(config, conversation.provider);
-  const { systemPrompt, messages } = buildChatPayload(conversation, userMessage);
+  const { systemPrompt, messages } = await buildChatPayload(config, conversation, userMessage);
   const response = await translator.chat(systemPrompt, messages, conversation);
+  await saveEmbedding(conversation.id, userMessage);
+  await saveEmbedding(conversation.id, { role: 'assistant', content: response });
   return response;
 }
 
@@ -77,9 +91,15 @@ export async function streamChatMessage(config, conversation, userMessage, onChu
   throw new Error(`Streaming not supported for provider: ${provider}`);
 }
 
-function buildChatPayload(conversation, userMessage, searchResults) {
+function estimateTokens(messages) {
+  const text = messages.map((m) => m.content || '').join(' ');
+  return Math.ceil(text.length / 4); // rough heuristic
+}
+
+export async function buildChatPayload(config, conversation, userMessage, searchResults) {
   const history = conversation.messages || [];
-  const contextMessages = history.slice(-6);
+  const contextMessages = history.slice(-20);
+  const includeSummary = conversation.useSummary !== false;
 
   const finalUserMessage = { ...userMessage };
 
@@ -99,16 +119,34 @@ function buildChatPayload(conversation, userMessage, searchResults) {
     finalUserMessage.content = `${searchResults}\n\nBased on the above search results, please answer the following.\n\n${finalUserMessage.content}`;
   }
 
-  const combined = [...contextMessages, finalUserMessage];
-  const systemPrompt = conversation.systemPrompt || '';
+  const semantic = await searchSimilar(conversation.id, finalUserMessage.content || '', 3);
+  const semanticContent = formatSemanticRecall(semantic);
 
+  const systemPrompt = conversation.systemPrompt || '';
   const messages = [];
-  if (conversation.summary) {
+  if (includeSummary && conversation.summary) {
     messages.push({ role: 'assistant', content: `Conversation summary: ${conversation.summary}` });
   }
-  messages.push(...combined);
+  if (semanticContent) {
+    messages.push({ role: 'assistant', content: semanticContent });
+  }
+  messages.push(...contextMessages);
+  messages.push(finalUserMessage);
 
-  return { systemPrompt, messages };
+  const maxContextTokens = 14000;
+  let current = messages;
+  while (estimateTokens(current) > maxContextTokens && current.length > 2) {
+    current = current.slice(1);
+  }
+
+  if (estimateTokens(current) > maxContextTokens && semanticContent) {
+    current = current.filter((m) => m.content !== semanticContent);
+    while (estimateTokens(current) > maxContextTokens && current.length > 2) {
+      current = current.slice(1);
+    }
+  }
+
+  return { systemPrompt: '', messages: current };
 }
 
 async function streamOpenAIStyle(config, conversation, userMessage, onChunk, searchResults) {
@@ -116,7 +154,12 @@ async function streamOpenAIStyle(config, conversation, userMessage, onChunk, sea
   const path = config.openai.path || DEFAULT_PATHS.OPENAI;
   const endpoint = `${host}${path}`;
 
-  const { systemPrompt, messages } = buildChatPayload(conversation, userMessage, searchResults);
+  const { systemPrompt, messages } = await buildChatPayload(
+    config,
+    conversation,
+    userMessage,
+    searchResults,
+  );
   const bodyMessages = messages.map((m) => normalizeOpenAIMessage(m));
   if (systemPrompt) {
     bodyMessages.unshift({ role: 'system', content: systemPrompt });
@@ -132,8 +175,9 @@ async function streamOpenAIStyle(config, conversation, userMessage, onChunk, sea
     body: JSON.stringify({
       model: config.openai.model || conversation.model || OPENAI_DEFAULT_MODEL,
       messages: bodyMessages,
-      temperature: config.openai.temperature ?? 0.3,
-      max_tokens: conversation.maxTokens || config.openai.maxTokens || 2048,
+      temperature:
+        conversation.temperature ?? config.openai.temperature ?? DEFAULT_TRANSLATION_TEMPERATURE,
+      max_tokens: conversation.maxTokens || config.openai.maxTokens || DEFAULT_MAX_TOKENS.openai,
       stream: true,
     }),
   });
@@ -185,8 +229,12 @@ async function streamOpenAIStyle(config, conversation, userMessage, onChunk, sea
 }
 
 async function streamGemini(config, conversation, userMessage, onChunk, searchResults) {
-  await ensureSummaryIfNeeded(config, conversation, userMessage);
-  const { systemPrompt, messages } = buildChatPayload(conversation, userMessage, searchResults);
+  const { systemPrompt, messages } = await buildChatPayload(
+    config,
+    conversation,
+    userMessage,
+    searchResults,
+  );
 
   const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey });
   const modelName = (config.gemini.model || conversation.model || GEMINI_DEFAULT_MODEL)
@@ -200,8 +248,9 @@ async function streamGemini(config, conversation, userMessage, onChunk, searchRe
   }));
 
   const generationConfig = {
-    temperature: config.gemini.temperature ?? 0.3,
-    maxOutputTokens: conversation.maxTokens || config.gemini.maxTokens || 2048,
+    temperature:
+      conversation.temperature ?? config.gemini.temperature ?? DEFAULT_TRANSLATION_TEMPERATURE,
+    maxOutputTokens: conversation.maxTokens || config.gemini.maxTokens || DEFAULT_MAX_TOKENS.gemini,
   };
 
   try {
@@ -236,7 +285,12 @@ async function streamClaude(config, conversation, userMessage, onChunk, searchRe
   const path = config.claude.path || DEFAULT_PATHS.CLAUDE;
   const endpoint = `${host}${path}`;
 
-  const { systemPrompt, messages } = buildChatPayload(conversation, userMessage, searchResults);
+  const { systemPrompt, messages } = await buildChatPayload(
+    config,
+    conversation,
+    userMessage,
+    searchResults,
+  );
   const claudeMessages = messages.map((m) => ({
     role: m.role === 'assistant' ? 'assistant' : 'user',
     content: m.content,
@@ -251,8 +305,9 @@ async function streamClaude(config, conversation, userMessage, onChunk, searchRe
     },
     body: JSON.stringify({
       model: config.claude.model || conversation.model || CLAUDE_DEFAULT_MODEL,
-      max_tokens: conversation.maxTokens || config.claude.maxTokens || 2048,
-      temperature: config.claude.temperature ?? 0.3,
+      max_tokens: conversation.maxTokens || config.claude.maxTokens || DEFAULT_MAX_TOKENS.claude,
+      temperature:
+        conversation.temperature ?? config.claude.temperature ?? DEFAULT_TRANSLATION_TEMPERATURE,
       system: systemPrompt || '',
       messages: claudeMessages,
       stream: true,
@@ -308,32 +363,47 @@ async function streamClaude(config, conversation, userMessage, onChunk, searchRe
   return fullText.trim();
 }
 
-function estimateTokens(messages) {
-  const text = messages.map((m) => m.content || '').join(' ');
-  return Math.ceil(text.length / 4); // rough heuristic
-}
-
 export async function ensureSummaryIfNeeded(config, conversation, userMessage) {
   const history = conversation.messages || [];
   const combined = [...history, userMessage];
 
+  const needsCountSummary = combined.length >= 8;
   const tokenEstimate = estimateTokens(combined);
   const contextLimit = 12000; // conservative context window
-  if (tokenEstimate <= contextLimit) {
+  if (!needsCountSummary && tokenEstimate <= contextLimit) {
     return conversation;
   }
 
-  const keepLast = 4;
+  // Avoid re-summarizing too frequently: if we already summarized this length, skip
+  if (
+    conversation.lastSummarizedCount !== undefined &&
+    combined.length <= conversation.lastSummarizedCount
+  ) {
+    return conversation;
+  }
+
+  const keepLast = 6;
   const toSummarize = combined.slice(0, Math.max(0, combined.length - keepLast));
-  const recent = combined.slice(-keepLast);
 
   const summaryText = await summarizeMessages(config, conversation, toSummarize);
   conversation.summary = summaryText;
-  conversation.messages = recent;
+  conversation.lastSummarizedCount = combined.length;
+
+  // Keep only the recent messages to reduce token load; drop the summarized prefix.
+  const recent = combined.slice(-keepLast);
+  // Ensure we don't store the just-added userMessage twice; caller adds it afterward.
+  if (recent.length > 0 && recent[recent.length - 1] === userMessage) {
+    conversation.messages = recent.slice(0, -1);
+  } else {
+    conversation.messages = recent;
+  }
   return conversation;
 }
 
 async function summarizeMessages(config, conversation, messages) {
+  if (!messages?.length) {
+    return conversation.summary || '';
+  }
   const translator = createChatProvider(config, conversation.provider);
   const summarizerConversation = {
     ...conversation,

@@ -19,7 +19,9 @@ import {
   streamChatMessage,
   ensureSummaryIfNeeded,
 } from './services/chatService.js';
-import { webSearchService } from './services/webSearchService.js';
+import { createChatProvider } from './services/chatProviders.js';
+import { runSearchCrawlProtocol } from './services/searchCrawlProtocol.js';
+import { saveEmbedding } from './services/memoryService.js';
 import { PROVIDER_DEFAULT_MODELS, filterModelsByProvider } from '../config/providers.js';
 import {
   DEFAULT_HOSTS,
@@ -52,6 +54,68 @@ function isNonTranslationOutput(text) {
     'in vietnamese',
   ];
   return badIndicators.some((k) => lowered.includes(k));
+}
+
+async function maybePlanWithLLM(config, conversation, userMessage) {
+  try {
+    const plannerProvider =
+      (config.openai?.apiKey && 'openai') ||
+      (config.claude?.apiKey && 'claude') ||
+      conversation?.provider ||
+      config.provider;
+
+    debug(`maybePlanWithLLM: selected provider=${plannerProvider}`);
+
+    if (!plannerProvider || !config[plannerProvider]?.apiKey) {
+      debug('maybePlanWithLLM: No valid provider/key found for planning');
+      return null;
+    }
+    const plannerConfig = { ...config, provider: plannerProvider };
+    const plannerModel = config[plannerProvider]?.model || conversation?.model || '';
+    debug(
+      `LLM plan using provider=${plannerProvider} model=${plannerModel || 'default'} msg="${userMessage.slice(
+        0,
+        120,
+      )}..."`,
+    );
+
+    const prompt = `You are a search planner. Analyze the user request and output ONLY JSON with this shape:
+{
+  "keywords": [up to 6 short keywords],
+  "queries": [up to 4 focused search queries],
+  "urls": [explicit URLs to crawl if mentioned]
+}
+Do not add explanations. User request: """${userMessage}"""`;
+
+    const messages = [{ role: 'user', content: prompt }];
+    const translator = createChatProvider(plannerConfig, plannerProvider);
+
+    // Mock a minimal conversation object for the provider (needs model/maxTokens)
+    const tempConvo = {
+      model: plannerModel,
+      maxTokens: 512,
+      provider: plannerProvider,
+    };
+
+    const response = await translator.chat('', messages, tempConvo);
+
+    debug('LLM plan raw response:', response.slice(0, 500));
+    const jsonStart = response.indexOf('{');
+    const jsonEnd = response.lastIndexOf('}');
+    if (jsonStart === -1 || jsonEnd === -1) {
+      return null;
+    }
+    const sliced = response.slice(jsonStart, jsonEnd + 1);
+    const parsed = JSON.parse(sliced);
+    return {
+      urls: Array.isArray(parsed.urls) ? parsed.urls : [],
+      queries: Array.isArray(parsed.queries) ? parsed.queries : [],
+      keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
+    };
+  } catch (err) {
+    error(`LLM plan failed for provider=${conversation?.provider || config.provider}:`, err);
+    return null;
+  }
 }
 
 /**
@@ -672,6 +736,7 @@ async function handleChatSend(payload, sendResponse) {
     const userPayload = {
       role: 'user',
       content: message.content,
+      timestamp: Date.now(),
       attachments: (message.attachments || []).slice(0, 4),
     };
 
@@ -679,7 +744,7 @@ async function handleChatSend(payload, sendResponse) {
 
     convo.messages.push(userPayload);
 
-    convo.messages.push({ role: 'assistant', content: assistantReply });
+    convo.messages.push({ role: 'assistant', content: assistantReply, timestamp: Date.now() });
     if (!convo.title || convo.title === 'New chat') {
       convo.title = message.content.slice(0, 40) || 'Conversation';
     }
@@ -727,27 +792,45 @@ async function handleChatStream(port, payload) {
     const userPayload = {
       role: 'user',
       content: message.content,
+      timestamp: Date.now(),
       attachments: (message.attachments || []).slice(0, 4),
     };
 
     // Summary if needed
     await ensureSummaryIfNeeded(config, convo, userPayload);
 
-    // Web Search if enabled
+    // Web Search & Crawl protocol if enabled
     let searchResults = null;
     const webConfig = config.webSearch || {};
 
-    // Allow if using DDG (no keys needed) OR Google (with keys)
-    const isDDG = webConfig.provider === 'ddg';
-    const isGoogleReady =
-      (webConfig.provider === 'google' || !webConfig.provider) && webConfig.apiKey && webConfig.cx;
+    if (message.webBrowsing) {
+      debug('handleChatStream: webBrowsing enabled');
+      const notifyStatus = (status) => {
+        try {
+          port.postMessage({
+            type: 'chatStreamStatus',
+            conversationId: convo.id,
+            status,
+          });
+        } catch (_) {
+          // ignore status errors
+        }
+      };
 
-    if (message.webBrowsing && (isDDG || isGoogleReady)) {
+      const llmPlan = await maybePlanWithLLM(config, convo, message.content);
+
       try {
-        searchResults = await webSearchService.search(message.content, webConfig);
+        searchResults = await runSearchCrawlProtocol(
+          message.content,
+          webConfig,
+          notifyStatus,
+          llmPlan,
+        );
       } catch (err) {
-        error('Web search error:', err);
-        // Continue without search results
+        error('Web search/crawl error:', err);
+        notifyStatus('Search failed, continuing without web context.');
+      } finally {
+        notifyStatus(null);
       }
     }
 
@@ -765,11 +848,15 @@ async function handleChatStream(port, payload) {
     await streamChatMessage(config, convo, userPayload, onChunk, searchResults);
 
     convo.messages.push(userPayload);
-    convo.messages.push({ role: 'assistant', content: assistantText });
+    convo.messages.push({ role: 'assistant', content: assistantText, timestamp: Date.now() });
     if (!convo.title || convo.title === 'New chat') {
       convo.title = message.content.slice(0, 40) || 'Conversation';
     }
     convo.updatedAt = Date.now();
+
+    // Save embeddings for recall
+    await saveEmbedding(convo.id, userPayload);
+    await saveEmbedding(convo.id, { role: 'assistant', content: assistantText });
 
     await upsertConversation(convo);
     port.postMessage({ type: 'chatStreamDone', conversation: convo });

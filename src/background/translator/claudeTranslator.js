@@ -16,7 +16,7 @@
  *   model: 'claude-3-sonnet-20240229',
  *   host: 'https://api.anthropic.com',
  *   path: '/v1/messages',
- *   temperature: 0.3,
+ *   temperature: 0.2,
  *   maxTokens: 2048
  * });
  *

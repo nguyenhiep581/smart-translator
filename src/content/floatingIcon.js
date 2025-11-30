@@ -17,6 +17,21 @@ export function showFloatingIcon(selection) {
   hideFloatingIcon();
 
   currentSelection = selection;
+  // Ensure we store a copy of rect to avoid DOMRect live mutations
+  const { rect } = selection;
+  if (rect) {
+    currentSelection = {
+      ...selection,
+      rect: {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+      },
+    };
+  }
 
   // Create icon
   floatingIcon = createElement('div', 'smart-translator-icon');
@@ -53,7 +68,18 @@ export function hideFloatingIcon() {
  */
 function handleIconHover() {
   if (currentSelection) {
-    showMiniPopup(currentSelection);
+    const iconRect = floatingIcon?.getBoundingClientRect();
+    const anchorRect = iconRect
+      ? {
+        left: iconRect.left,
+        top: iconRect.top,
+        right: iconRect.right,
+        bottom: iconRect.bottom,
+        width: iconRect.width,
+        height: iconRect.height,
+      }
+      : currentSelection.rect;
+    showMiniPopup({ ...currentSelection, rect: anchorRect, ignoreSelection: true });
     // Hide icon after showing popup to prevent re-hover
     hideFloatingIcon();
   }
@@ -65,7 +91,18 @@ function handleIconHover() {
 function handleIconClick(event) {
   event.stopPropagation();
   if (currentSelection) {
-    showMiniPopup(currentSelection);
+    const iconRect = floatingIcon?.getBoundingClientRect();
+    const anchorRect = iconRect
+      ? {
+        left: iconRect.left,
+        top: iconRect.top,
+        right: iconRect.right,
+        bottom: iconRect.bottom,
+        width: iconRect.width,
+        height: iconRect.height,
+      }
+      : currentSelection.rect;
+    showMiniPopup({ ...currentSelection, rect: anchorRect, ignoreSelection: true });
     // Hide icon after showing popup
     hideFloatingIcon();
   }

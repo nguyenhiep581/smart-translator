@@ -4,6 +4,8 @@ import {
   filterModelsByProvider,
   sanitizeModel,
   PROVIDER_DEFAULT_MODELS,
+  DEFAULT_CHAT_TEMPERATURE,
+  DEFAULT_CHAT_MAX_TOKENS,
 } from '../config/providers.js';
 import hljs from 'highlight.js/lib/common';
 import { marked } from 'marked';
@@ -101,10 +103,36 @@ const modelSelect = () => document.getElementById('model-select');
 const modalEl = () => document.getElementById('settings-modal');
 const modalSystemPrompt = () => document.getElementById('modal-system-prompt');
 const modalMaxTokens = () => document.getElementById('modal-max-tokens');
+const modalTemperature = () => document.getElementById('modal-temperature');
 const messagesEl = () => document.getElementById('messages');
 const convoListEl = () => document.getElementById('conversation-list');
 const inputEl = () => document.getElementById('input');
 const attachmentContainer = () => document.getElementById('attachment-previews');
+
+function formatTimestamp(ts) {
+  if (!ts) {
+    return '';
+  }
+  try {
+    return new Date(ts).toLocaleString();
+  } catch (_) {
+    return '';
+  }
+}
+
+function updateWebBrowsingUI() {
+  const btn = document.getElementById('web-search-btn');
+  if (!btn) {
+    return;
+  }
+  if (webBrowsingEnabled) {
+    btn.classList.add('active');
+    btn.style.color = '#3b82f6';
+  } else {
+    btn.classList.remove('active');
+    btn.style.color = '';
+  }
+}
 
 async function init() {
   await loadConfig();
@@ -116,6 +144,21 @@ async function init() {
   } else {
     disableModelSelect('Add an API key in Options to choose models');
   }
+
+  // Load saved web browsing state
+  try {
+    const state = await chrome.storage.local.get('webBrowsingEnabled');
+    if (state && state.webBrowsingEnabled === true) {
+      webBrowsingEnabled = true;
+    } else {
+      webBrowsingEnabled = false;
+    }
+    updateWebBrowsingUI();
+    debug('Chat init: loaded webBrowsingEnabled =', webBrowsingEnabled);
+  } catch (err) {
+    logError('Failed to load web browsing state', err);
+  }
+
   updateSendAvailability();
   bindEvents();
   renderConversations();
@@ -283,7 +326,7 @@ async function loadConversations() {
       conversations =
         res.data?.map((c) => {
           const maxNum = Number(c.maxTokens);
-          const safeMax = Number.isFinite(maxNum) ? maxNum : 10000;
+          const safeMax = Number.isFinite(maxNum) ? maxNum : DEFAULT_CHAT_MAX_TOKENS;
           return { ...c, maxTokens: safeMax };
         }) || [];
     }
@@ -313,13 +356,15 @@ async function createNewConversation() {
     }
 
     const systemPrompt = config.systemPrompt || getProviderSystemPrompt(provider);
+    const defaultTemp = config.chat?.temperature ?? DEFAULT_CHAT_TEMPERATURE;
     const res = await chrome.runtime.sendMessage({
       type: 'chatCreate',
       payload: {
         provider,
         model,
         systemPrompt,
-        maxTokens: 10000,
+        maxTokens: DEFAULT_CHAT_MAX_TOKENS,
+        temperature: defaultTemp,
       },
     });
     if (res.success) {
@@ -392,33 +437,17 @@ function bindEvents() {
   });
 
   document.getElementById('web-search-btn').addEventListener('click', () => {
-    // Check if web search is configured
-    const provider = config.webSearch?.provider || 'ddg';
-    const isGoogle = provider === 'google';
-    const hasGoogleKeys = config.webSearch?.apiKey && config.webSearch?.cx;
-
-    if (isGoogle && !hasGoogleKeys) {
-      alert(
-        'Please configure Google Search API settings in Options first, or switch to DuckDuckGo (Free).',
-      );
-      chrome.runtime.openOptionsPage();
-      return;
-    }
-
     webBrowsingEnabled = !webBrowsingEnabled;
-    const btn = document.getElementById('web-search-btn');
-    if (webBrowsingEnabled) {
-      btn.classList.add('active');
-      btn.style.color = '#3b82f6'; // distinct active color
-    } else {
-      btn.classList.remove('active');
-      btn.style.color = '';
-    }
+    updateWebBrowsingUI();
+    chrome.storage.local.set({ webBrowsingEnabled }).catch((err) => {
+      logError('Failed to save web browsing state', err);
+    });
   });
 
   document.getElementById('file-input').addEventListener('change', handleFiles);
   document.getElementById('btn-system-prompt').addEventListener('click', () => openModal());
   document.getElementById('btn-max-tokens').addEventListener('click', () => openModal());
+  document.getElementById('btn-temperature').addEventListener('click', () => openModal());
   document.getElementById('btn-prompts').addEventListener('click', openPromptsModal);
   document.getElementById('refresh-models').addEventListener('click', refreshModels);
   document.getElementById('close-modal').addEventListener('click', closeModal);
@@ -426,6 +455,9 @@ function bindEvents() {
   document.getElementById('modal-save').addEventListener('click', saveModalSettings);
   document.getElementById('modal-backdrop').addEventListener('click', closeModal);
   modalMaxTokens().addEventListener('keydown', (e) => {
+    e.stopPropagation();
+  });
+  modalTemperature().addEventListener('keydown', (e) => {
     e.stopPropagation();
   });
 
@@ -515,7 +547,7 @@ function renderConversations() {
 function updateLastMessage(content) {
   const messages = messagesEl();
   const lastMsgRow = messages.querySelector('.msg:last-child');
-  const lastMsg = lastMsgRow?.querySelector('.bubble');
+  const lastMsg = lastMsgRow?.querySelector('.message-body');
   const roleIcon = lastMsgRow?.querySelector('.role');
 
   if (lastMsg) {
@@ -534,6 +566,53 @@ function updateLastMessage(content) {
   }
 }
 
+function createMessageActions(messageText) {
+  const actions = document.createElement('div');
+  actions.className = 'message-actions';
+  actions.innerHTML = `
+    <button class="action-btn copy" aria-label="Copy message" title="Copy">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"></path>
+      </svg>
+    </button>
+    <button class="action-btn quote" aria-label="Quote message" title="Quote">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+        <path d="M7 7h6v2H9v6H7V7zm8 0h6v2h-4v6h-2V7z" fill="currentColor"></path>
+      </svg>
+    </button>
+  `;
+  const copyBtn = actions.querySelector('.copy');
+  const quoteBtn = actions.querySelector('.quote');
+  copyBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(messageText);
+    } catch (err) {
+      logError('Copy message failed', err);
+    }
+  });
+  quoteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const input = inputEl();
+    if (!input) {
+      return;
+    }
+    input.value = messageText;
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+    updateSendAvailability();
+  });
+  return actions;
+}
+
+function attachMessageActions(bubbleEl, messageText) {
+  if (!bubbleEl) {
+    return;
+  }
+  bubbleEl.querySelector('.message-actions')?.remove();
+  bubbleEl.appendChild(createMessageActions(messageText));
+}
+
 function renderMessages() {
   messagesEl().innerHTML = '';
   if (!currentConversation || !currentConversation.messages?.length) {
@@ -547,56 +626,21 @@ function renderMessages() {
     const rendered = renderMarkdown(m.content || '');
     const isEmpty = !m.content || m.content.trim() === '';
     const messageText = m.content || '';
+    const meta = formatTimestamp(m.timestamp);
 
     // Always show 🤖 for assistant, 🧑 for user (no loading spinner)
     const badge = m.role === 'assistant' ? '🤖' : '🧑';
 
     row.innerHTML = `
       <div class="role" title="${m.role}">${badge}</div>
-      <div class="bubble markdown-body">${rendered || (isEmpty ? '<div class="loading-dots">Thinking...</div>' : '')}</div>
+      <div class="bubble markdown-body">
+        <div class="message-body">${rendered || (isEmpty ? '<div class="loading-dots">Thinking...</div>' : '')}</div>
+        <div class="message-meta">${meta}</div>
+      </div>
     `;
 
-    if (m.role === 'assistant') {
-      const actions = document.createElement('div');
-      actions.className = 'message-actions';
-      actions.innerHTML = `
-        <button class="action-btn copy" aria-label="Copy message" title="Copy">
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="currentColor"></path>
-          </svg>
-        </button>
-        <button class="action-btn quote" aria-label="Quote message" title="Quote">
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <path d="M7 7h6v2H9v6H7V7zm8 0h6v2h-4v6h-2V7z" fill="currentColor"></path>
-          </svg>
-        </button>
-      `;
-      const copyBtn = actions.querySelector('.copy');
-      const quoteBtn = actions.querySelector('.quote');
-      copyBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        try {
-          await navigator.clipboard.writeText(messageText);
-        } catch (err) {
-          logError('Copy message failed', err);
-        }
-      });
-      quoteBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const input = inputEl();
-        if (!input) {
-          return;
-        }
-        input.value = messageText;
-        input.focus();
-        input.setSelectionRange(input.value.length, input.value.length);
-        updateSendAvailability();
-      });
-      const bubbleEl = row.querySelector('.bubble');
-      if (bubbleEl) {
-        bubbleEl.appendChild(actions);
-      }
-    }
+    const bubbleEl = row.querySelector('.bubble');
+    attachMessageActions(bubbleEl, messageText);
     messagesEl().appendChild(row);
   });
   messagesEl().scrollTop = messagesEl().scrollHeight;
@@ -631,8 +675,8 @@ function setActiveConversation(id) {
       getDefaultModel(currentConversation.provider || config.provider),
   );
   modalSystemPrompt().value = currentConversation.systemPrompt || '';
-  modalMaxTokens().value = currentConversation.maxTokens || 10000;
-  attachments = [];
+  modalMaxTokens().value = currentConversation.maxTokens || DEFAULT_CHAT_MAX_TOKENS;
+  modalTemperature().value = currentConversation.temperature ?? DEFAULT_CHAT_TEMPERATURE;
   renderAttachmentPreviews();
   renderConversations();
   renderMessages();
@@ -731,7 +775,12 @@ async function sendMessage() {
     content: text,
     attachments: attachments.slice(0, 4),
     webBrowsing: webBrowsingEnabled,
+    timestamp: Date.now(),
   };
+  debug('sendMessage payload:', {
+    webBrowsing: webBrowsingEnabled,
+    attachmentsCount: attachments.length,
+  });
 
   // Build a clean copy for sending (no optimistic messages)
   const convoForSend = {
@@ -747,8 +796,8 @@ async function sendMessage() {
     ...convoForSend,
     messages: [
       ...convoForSend.messages,
-      { role: 'user', content: text },
-      { role: 'assistant', content: '' },
+      { role: 'user', content: text, timestamp: messagePayload.timestamp },
+      { role: 'assistant', content: '', timestamp: Date.now() },
     ],
   };
   currentConversation = uiConversation;
@@ -1047,6 +1096,7 @@ function handleStreamMessage(msg) {
       updateLastMessage(msg.content || '');
     }
   } else if (msg.type === 'chatStreamDone') {
+    renderStatus(null);
     streamingConversationId = null;
 
     const convo = msg.conversation;
@@ -1064,8 +1114,12 @@ function handleStreamMessage(msg) {
     if (lastMsg && convo.messages?.length) {
       const lastContent = convo.messages[convo.messages.length - 1].content;
       const rendered = renderMarkdown(lastContent || '');
-      lastMsg.innerHTML = rendered;
-      lastMsg.style.whiteSpace = '';
+      const body = lastMsg.querySelector('.message-body');
+      if (body) {
+        body.innerHTML = rendered;
+        body.style.whiteSpace = '';
+      }
+      attachMessageActions(lastMsg, lastContent || '');
 
       // Re-attach copy handlers
       lastMsg.querySelectorAll('.copy-btn').forEach((btn) => {
@@ -1084,7 +1138,9 @@ function handleStreamMessage(msg) {
 
     renderConversations(); // Only update conversation list
     renderError(null);
+    renderStatus(null);
   } else if (msg.type === 'chatStreamError') {
+    renderStatus(null);
     streamingConversationId = null;
     renderError(msg.error || 'Streaming failed. Please retry.');
     try {
@@ -1102,6 +1158,11 @@ function handleStreamMessage(msg) {
         setActiveConversation(conversations[0].id);
       }
     });
+  } else if (msg.type === 'chatStreamStatus') {
+    if (msg.conversationId && msg.conversationId !== streamingConversationId) {
+      return;
+    }
+    renderStatus(msg.status);
   }
 }
 
@@ -1323,13 +1384,27 @@ function renderError(message) {
     el.innerHTML = '';
     return;
   }
+  const lastUserMsg = lastPendingMessage?.message?.content || '';
+  const preview = lastUserMsg ? escapeHtml(lastUserMsg.slice(0, 200)) : '';
   el.style.display = 'flex';
   el.innerHTML = `
     <span>${escapeHtml(message)}</span>
+    ${
+  preview
+    ? `<div class="retry-preview" title="Original message">${preview}${lastUserMsg.length > 200 ? '…' : ''}</div>`
+    : ''
+}
     <button id="retry-chat">Retry</button>
   `;
   document.getElementById('retry-chat')?.addEventListener('click', () => {
     renderError(null);
+    if (preview) {
+      const input = inputEl();
+      if (input) {
+        input.value = lastUserMsg;
+        input.focus();
+      }
+    }
     if (lastPendingMessage) {
       if (!ensurePort()) {
         connectStreamPort();
@@ -1348,12 +1423,27 @@ function renderError(message) {
   });
 }
 
+function renderStatus(message) {
+  const el = document.getElementById('chat-status');
+  if (!el) {
+    return;
+  }
+  if (!message) {
+    el.style.display = 'none';
+    el.textContent = '';
+    return;
+  }
+  el.style.display = 'flex';
+  el.textContent = message;
+}
+
 function openModal() {
   if (!currentConversation) {
     return;
   }
   modalSystemPrompt().value = currentConversation.systemPrompt || '';
-  modalMaxTokens().value = currentConversation.maxTokens || 10000;
+  modalMaxTokens().value = currentConversation.maxTokens || DEFAULT_CHAT_MAX_TOKENS;
+  modalTemperature().value = currentConversation.temperature ?? DEFAULT_CHAT_TEMPERATURE;
   modalEl().classList.remove('modal-hidden');
 }
 
@@ -1367,9 +1457,11 @@ async function saveModalSettings() {
     return;
   }
   const newPrompt = modalSystemPrompt().value;
-  const newMax = parseInt(modalMaxTokens().value, 10) || 10000;
+  const newMax = parseInt(modalMaxTokens().value, 10) || DEFAULT_CHAT_MAX_TOKENS;
+  const newTemp = parseFloat(modalTemperature().value);
   currentConversation.systemPrompt = newPrompt;
   currentConversation.maxTokens = newMax;
+  currentConversation.temperature = isNaN(newTemp) ? DEFAULT_CHAT_TEMPERATURE : newTemp;
   await persistConversation();
   updateSettingsButtons();
   closeModal();
@@ -1378,14 +1470,19 @@ async function saveModalSettings() {
 function updateSettingsButtons() {
   const sysBtn = document.getElementById('btn-system-prompt');
   const maxBtn = document.getElementById('btn-max-tokens');
+  const tempBtn = document.getElementById('btn-temperature');
   if (sysBtn) {
     const hasPrompt = currentConversation?.systemPrompt?.trim();
     sysBtn.textContent = hasPrompt ? '🧠 System prompt (set)' : '🧠 System prompt';
   }
   if (maxBtn) {
     const maxValue = Number(currentConversation?.maxTokens);
-    const max = Number.isFinite(maxValue) ? maxValue : 10000;
+    const max = Number.isFinite(maxValue) ? maxValue : DEFAULT_CHAT_MAX_TOKENS;
     maxBtn.textContent = `🧮 Max tokens (${max})`;
+  }
+  if (tempBtn) {
+    const tempValue = currentConversation?.temperature ?? DEFAULT_CHAT_TEMPERATURE;
+    tempBtn.textContent = `🌡️ Temp (${tempValue})`;
   }
 }
 

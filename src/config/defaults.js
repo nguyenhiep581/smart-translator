@@ -5,6 +5,9 @@ import {
   GEMINI_DEFAULT_MODEL,
   DEFAULT_HOSTS,
   DEFAULT_PATHS,
+  DEFAULT_CHAT_TEMPERATURE,
+  DEFAULT_TRANSLATION_TEMPERATURE,
+  DEFAULT_CHAT_MAX_TOKENS,
 } from './constants.js';
 
 /**
@@ -21,8 +24,8 @@ export const DEFAULT_CONFIG = {
     model: OPENAI_DEFAULT_MODEL,
     host: DEFAULT_HOSTS.OPENAI,
     path: DEFAULT_PATHS.OPENAI,
-    temperature: 0.3,
-    maxTokens: 10000,
+    temperature: DEFAULT_TRANSLATION_TEMPERATURE,
+    maxTokens: DEFAULT_CHAT_MAX_TOKENS,
   },
 
   // Claude settings
@@ -31,23 +34,26 @@ export const DEFAULT_CONFIG = {
     model: CLAUDE_DEFAULT_MODEL,
     host: DEFAULT_HOSTS.CLAUDE,
     path: DEFAULT_PATHS.CLAUDE,
-    temperature: 0.3,
-    maxTokens: 10000,
+    temperature: DEFAULT_TRANSLATION_TEMPERATURE,
+    maxTokens: DEFAULT_CHAT_MAX_TOKENS,
   },
 
   // Gemini settings
   gemini: {
     apiKey: '',
     model: GEMINI_DEFAULT_MODEL,
-    temperature: 0.3,
-    maxTokens: 10000,
+    temperature: DEFAULT_TRANSLATION_TEMPERATURE,
+    maxTokens: DEFAULT_CHAT_MAX_TOKENS,
+  },
+
+  // Chat-specific settings (overrides provider defaults)
+  chat: {
+    temperature: DEFAULT_CHAT_TEMPERATURE,
   },
 
   // Web search settings
   webSearch: {
     provider: 'ddg',
-    apiKey: '',
-    cx: '',
   },
 
   // Language settings

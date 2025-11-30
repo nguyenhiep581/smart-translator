@@ -82,8 +82,10 @@ export async function showMiniPopup(selection, options = {}) {
     </div>
   `;
 
-  // Position near selection
-  positionNearRect(miniPopup, selection.rect, 10);
+  // Position near selection or provided anchor
+  positionNearRect(miniPopup, selection.rect, 10, {
+    ignoreSelection: selection?.ignoreSelection === true,
+  });
 
   // Add event listeners
   miniPopup.querySelector('.st-to-lang').addEventListener('change', async (e) => {

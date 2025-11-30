@@ -254,58 +254,11 @@
             <div class="form-group">
               <label class="form-label">Search Provider</label>
               <select id="search-provider" class="form-select">
-                <option value="ddg">DuckDuckGo (Free)</option>
-                <option value="google">Google Programmable Search (API Key)</option>
+                <option value="ddg" selected>DuckDuckGo (Free)</option>
               </select>
             </div>
 
-            <div id="google-search-config">
-              <h4
-                class="card-subtitle"
-                style="margin-top: 16px; margin-bottom: 8px; font-size: 14px"
-              >
-                Google Settings
-              </h4>
-              <p class="info-text">
-                To enable real-time web browsing capabilities with Google, you need to configure a
-                Google Programmable Search Engine.
-              </p>
-
-              <div class="form-group">
-                <label class="form-label">Google Custom Search API Key</label>
-                <input
-                  type="password"
-                  id="google-search-api-key"
-                  class="form-input"
-                  placeholder="AIza..."
-                />
-                <div class="form-help">
-                  Get your API key from the
-                  <a href="https://developers.google.com/custom-search/v1/overview" target="_blank"
-                    >Google Cloud Console</a
-                  >.
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">Search Engine ID (CX)</label>
-                <input
-                  type="text"
-                  id="google-search-cx"
-                  class="form-input"
-                  placeholder="0123456789..."
-                />
-                <div class="form-help">
-                  Create a search engine at
-                  <a href="https://programmablesearchengine.google.com/" target="_blank"
-                    >Programmable Search Engine</a
-                  >
-                  and get the CX ID.
-                </div>
-              </div>
-            </div>
-
-            <div id="ddg-search-config" style="display: none">
+            <div id="ddg-search-config">
               <h4
                 class="card-subtitle"
                 style="margin-top: 16px; margin-bottom: 8px; font-size: 14px"
@@ -316,7 +269,7 @@
                 DuckDuckGo search is free and requires no API key.
                 <br />
                 <span style="font-size: 12px; color: #666"
-                  >Note: This uses HTML scraping and may be less reliable than the Google API.</span
+                  >Note: This uses HTML scraping and may be less reliable.</span
                 >
               </p>
             </div>

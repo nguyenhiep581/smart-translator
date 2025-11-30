@@ -115,8 +115,10 @@ export function isInViewport(element) {
  * @param {HTMLElement} element - Element to position
  * @param {DOMRect} rect - Reference rect
  * @param {number} offset - Offset in pixels
+ * @param {{ignoreSelection?: boolean}} options - Positioning options
  */
-export function positionNearRect(element, rect, offset = 5) {
+export function positionNearRect(element, rect, offset = 5, options = {}) {
+  const { ignoreSelection = false } = options;
   const scrollX = window.scrollX || window.pageXOffset;
   const scrollY = window.scrollY || window.pageYOffset;
 
@@ -134,7 +136,7 @@ export function positionNearRect(element, rect, offset = 5) {
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
 
   // Get actual selection end position
-  const selection = window.getSelection();
+  const selection = ignoreSelection ? null : window.getSelection();
   let actualRight = rect.right;
   if (selection && selection.rangeCount > 0) {
     const range = selection.getRangeAt(0);

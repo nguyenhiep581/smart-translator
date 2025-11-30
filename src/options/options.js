@@ -384,15 +384,13 @@ document.getElementById('save-language')?.addEventListener('click', async () => 
 // Save Web Search settings
 document.getElementById('save-websearch')?.addEventListener('click', async () => {
   const provider = document.getElementById('search-provider').value;
-  const apiKey = document.getElementById('google-search-api-key').value.trim();
-  const cx = document.getElementById('google-search-cx').value.trim();
 
   try {
     const settings = await loadSettings();
     settings.webSearch = {
       provider,
-      apiKey,
-      cx,
+      apiKey: '',
+      cx: '',
     };
     await saveSettings(settings);
     showNotification('Web Search settings saved', 'success');
@@ -403,10 +401,10 @@ document.getElementById('save-websearch')?.addEventListener('click', async () =>
 
 document.getElementById('search-provider')?.addEventListener('change', (e) => {
   const provider = e.target.value;
-  document.getElementById('google-search-config').style.display =
-    provider === 'google' ? 'block' : 'none';
-  document.getElementById('ddg-search-config').style.display =
-    provider === 'ddg' ? 'block' : 'none';
+  const ddgConfig = document.getElementById('ddg-search-config');
+  if (ddgConfig) {
+    ddgConfig.style.display = provider === 'ddg' ? 'block' : 'none';
+  }
 });
 
 // Save cache settings
@@ -595,11 +593,8 @@ async function loadSettingsUI() {
 
     // Web Search
     if (settings.webSearch) {
-      document.getElementById('search-provider').value = settings.webSearch.provider || 'ddg';
-      document.getElementById('google-search-api-key').value = settings.webSearch.apiKey || '';
-      document.getElementById('google-search-cx').value = settings.webSearch.cx || '';
-
-      // Trigger change event to set correct visibility
+      // Enforce DDG since other providers were removed
+      document.getElementById('search-provider').value = 'ddg';
       document.getElementById('search-provider').dispatchEvent(new Event('change'));
     } else {
       // Default to DDG if no settings exist yet

@@ -16,7 +16,7 @@
  *   model: 'gpt-4',
  *   host: 'https://api.openai.com',
  *   path: '/v1/chat/completions',
- *   temperature: 0.3,
+ *   temperature: 0.2,
  *   maxTokens: 2048
  * });
  *

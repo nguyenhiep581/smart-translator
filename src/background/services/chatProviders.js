@@ -48,9 +48,10 @@ export class ChatOpenAI extends OpenAITranslator {
           model: this.config.model || conversation.model || OPENAI_DEFAULT_MODEL,
           messages: bodyMessages,
           temperature:
-            this.config.temperature !== undefined
+            conversation.temperature ??
+            (this.config.temperature !== undefined
               ? this.config.temperature
-              : DEFAULT_TEMPERATURE.openai,
+              : DEFAULT_TEMPERATURE.openai),
           max_tokens: conversation.maxTokens || this.config.maxTokens || DEFAULT_MAX_TOKENS.openai,
         }),
       });
@@ -95,9 +96,10 @@ export class ChatClaude extends ClaudeTranslator {
           model: this.config.model || conversation.model || CLAUDE_DEFAULT_MODEL,
           max_tokens: conversation.maxTokens || this.config.maxTokens || DEFAULT_MAX_TOKENS.claude,
           temperature:
-            this.config.temperature !== undefined
+            conversation.temperature ??
+            (this.config.temperature !== undefined
               ? this.config.temperature
-              : DEFAULT_TEMPERATURE.claude,
+              : DEFAULT_TEMPERATURE.claude),
           system: systemPrompt || '',
           messages: claudeMessages,
         }),
@@ -136,14 +138,22 @@ export class ChatGemini extends GeminiTranslator {
 
     const generationConfig = {
       temperature:
-        this.config.temperature !== undefined
+        conversation.temperature ??
+        (this.config.temperature !== undefined
           ? this.config.temperature
-          : DEFAULT_TEMPERATURE.gemini,
+          : DEFAULT_TEMPERATURE.gemini),
       maxOutputTokens: conversation.maxTokens || this.config.maxTokens || DEFAULT_MAX_TOKENS.gemini,
     };
 
     try {
       // Generate content with system instruction in config
+      // Use debug instead of error for request logging
+      // debug('Gemini request', {
+      //   model: modelName,
+      //   systemPrompt,
+      //   messageCount: messages.length,
+      //   maxOutputTokens: generationConfig.maxOutputTokens,
+      // });
       const result = await ai.models.generateContent({
         model: modelName,
         contents,
@@ -153,12 +163,43 @@ export class ChatGemini extends GeminiTranslator {
         },
       });
 
-      const content = result.text;
+      const candidate = result?.response?.candidates?.[0];
+      let partsText =
+        candidate?.content?.parts
+          ?.map((p) => (typeof p.text === 'function' ? p.text() : p.text) || '')
+          .join('') ||
+        result?.text ||
+        '';
 
-      if (!content) {
-        throw new Error('Invalid response from Gemini');
+      // Handle if result.text is a function (SDK helper)
+      if (!partsText && typeof result?.text === 'function') {
+        try {
+          partsText = result.text();
+        } catch (e) {
+          // ignore
+        }
       }
-      return content.trim();
+
+      if (!partsText) {
+        const promptFeedback = result?.response?.promptFeedback;
+        const blockReason =
+          promptFeedback?.blockReason ||
+          promptFeedback?.blockReasonMessage ||
+          candidate?.finishReason;
+        logError('Gemini chat empty content', {
+          model: modelName,
+          finishReason: candidate?.finishReason,
+          safetyRatings: candidate?.safetyRatings,
+          candidatesCount: result?.response?.candidates?.length,
+          promptFeedback,
+          fullResult: result,
+        });
+        const userMsg = blockReason
+          ? `Gemini blocked the response (${blockReason}).`
+          : 'Gemini returned empty content.';
+        throw new Error(userMsg);
+      }
+      return partsText.trim();
     } catch (err) {
       logError('Gemini chat error:', err);
       throw err;

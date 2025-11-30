@@ -39,7 +39,7 @@ export class GeminiTranslator extends BaseTranslator {
         temperature:
           this.config.temperature !== undefined
             ? this.config.temperature
-            : DEFAULT_TEMPERATURE.gemini, // Lower temperature for more focused output
+            : DEFAULT_TEMPERATURE.gemini,
         maxOutputTokens: this.config.maxTokens ?? DEFAULT_MAX_TOKENS.gemini,
         topP: 0.8, // Reduce randomness
         topK: 20, // More focused sampling

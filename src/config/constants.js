@@ -20,11 +20,17 @@ export const DEFAULT_PATHS = {
 };
 
 // Default generation settings
+export const DEFAULT_TRANSLATION_TEMPERATURE = 0.2;
+
 export const DEFAULT_TEMPERATURE = {
-  openai: 0.3,
-  claude: 0.3,
-  gemini: 0.3,
+  openai: DEFAULT_TRANSLATION_TEMPERATURE,
+  claude: DEFAULT_TRANSLATION_TEMPERATURE,
+  gemini: DEFAULT_TRANSLATION_TEMPERATURE,
 };
+
+export const DEFAULT_CHAT_TEMPERATURE = 0.7;
+
+export const DEFAULT_CHAT_MAX_TOKENS = 10000;
 
 export const DEFAULT_MAX_TOKENS = {
   openai: 2048,
