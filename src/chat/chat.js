@@ -610,6 +610,9 @@ function attachMessageActions(bubbleEl, messageText) {
     return;
   }
   bubbleEl.querySelector('.message-actions')?.remove();
+  if (!messageText || !messageText.trim()) {
+    return;
+  }
   bubbleEl.appendChild(createMessageActions(messageText));
 }
 
