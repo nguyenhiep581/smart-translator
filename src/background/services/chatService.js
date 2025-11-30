@@ -122,14 +122,15 @@ export async function buildChatPayload(config, conversation, userMessage, search
   const semantic = await searchSimilar(conversation.id, finalUserMessage.content || '', 3);
   const semanticContent = formatSemanticRecall(semantic);
 
-  const systemPrompt = conversation.systemPrompt || '';
-  const messages = [];
+  let systemPrompt = conversation.systemPrompt || '';
   if (includeSummary && conversation.summary) {
-    messages.push({ role: 'assistant', content: `Conversation summary: ${conversation.summary}` });
+    systemPrompt += `\n\nConversation summary: ${conversation.summary}`;
   }
   if (semanticContent) {
-    messages.push({ role: 'assistant', content: semanticContent });
+    systemPrompt += `\n\n${semanticContent}`;
   }
+
+  const messages = [];
   messages.push(...contextMessages);
   messages.push(finalUserMessage);
 
@@ -139,14 +140,7 @@ export async function buildChatPayload(config, conversation, userMessage, search
     current = current.slice(1);
   }
 
-  if (estimateTokens(current) > maxContextTokens && semanticContent) {
-    current = current.filter((m) => m.content !== semanticContent);
-    while (estimateTokens(current) > maxContextTokens && current.length > 2) {
-      current = current.slice(1);
-    }
-  }
-
-  return { systemPrompt: '', messages: current };
+  return { systemPrompt, messages: current };
 }
 
 async function streamOpenAIStyle(config, conversation, userMessage, onChunk, searchResults) {
