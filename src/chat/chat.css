@@ -420,6 +420,40 @@ body {
   box-shadow: 0 2px 4px rgba(74, 144, 226, 0.1);
 }
 
+.thinking-process {
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+}
+
+.thinking-process summary {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  user-select: none;
+  transition: background 0.15s ease;
+  display: flex;
+  align-items: center;
+}
+
+.thinking-process summary:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text);
+}
+
+.thinking-content {
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  background: #fff;
+  line-height: 1.6;
+}
+
 .message-actions {
   position: absolute;
   display: flex;

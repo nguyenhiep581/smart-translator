@@ -1535,7 +1535,17 @@ function renderMarkdown(text) {
   if (!text) {
     return '';
   }
-  const normalized = normalizeCodeFences(text);
+
+  // Handle <think> blocks
+  let processedText = text;
+  const thinkMatch = text.match(/<think>([\s\S]*?)<\/think>/i);
+  if (thinkMatch) {
+    const thinkingContent = thinkMatch[1].trim();
+    const thinkingHtml = `<details class="thinking-process"><summary>Thinking Process</summary><div class="thinking-content">${marked.parse(thinkingContent)}</div></details>`;
+    processedText = text.replace(/<think>[\s\S]*?<\/think>/i, thinkingHtml);
+  }
+
+  const normalized = normalizeCodeFences(processedText);
   const { replaced, mathBlocks } = protectMath(normalized);
   const parsed = marked.parse(replaced);
 
@@ -1547,6 +1557,44 @@ function renderMarkdown(text) {
 
   const temp = document.createElement('div');
   temp.innerHTML = restored;
+
+  // Fix double rendering of thinking block if marked parsed it again
+  const details = temp.querySelector('details.thinking-process');
+  if (details) {
+    // The thinking block was already HTML, so marked might have escaped it or wrapped it.
+    // However, since we replaced it in the text before marked, marked might treat it as HTML (if enabled) or text.
+    // Let's adjust the logic: strip the think block, render it separately, then prepend.
+  }
+
+  // New Logic: Strip think block, render main text, then prepend think block UI
+  if (thinkMatch) {
+    const thinkingContent = thinkMatch[1].trim();
+    const mainText = text.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
+
+    const normalizedMain = normalizeCodeFences(mainText);
+    const { replaced: replacedMain, mathBlocks: mathBlocksMain } = protectMath(normalizedMain);
+    const parsedMain = marked.parse(replacedMain);
+
+    let restoredMain = parsedMain;
+    mathBlocksMain.forEach(({ placeholder, content, display }) => {
+      const html = renderMath(content, display);
+      restoredMain = restoredMain.replaceAll(placeholder, html);
+    });
+
+    temp.innerHTML = `<details class="thinking-process"><summary>Thinking Process</summary><div class="thinking-content">${marked.parse(thinkingContent)}</div></details>${restoredMain}`;
+  } else {
+    // Original logic
+    const normalized = normalizeCodeFences(text);
+    const { replaced, mathBlocks } = protectMath(normalized);
+    const parsed = marked.parse(replaced);
+
+    let restored = parsed;
+    mathBlocks.forEach(({ placeholder, content, display }) => {
+      const html = renderMath(content, display);
+      restored = restored.replaceAll(placeholder, html);
+    });
+    temp.innerHTML = restored;
+  }
 
   temp.querySelectorAll('pre code').forEach((codeEl) => {
     // Code is already highlighted by marked, just add hljs class for styling
