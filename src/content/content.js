@@ -38,6 +38,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 });
 
 let selectionTimeout = null;
+let selectionChangeTimeout = null;
 
 // Listen for text selection
 document.addEventListener('mouseup', handleMouseUp);
@@ -108,15 +109,19 @@ function handleMouseUp(event) {
 }
 
 /**
- * Handle selection change
+ * Handle selection change with debouncing
  */
 function handleSelectionChange() {
-  const selection = window.getSelection();
+  // Debounce selection change to reduce excessive calls
+  clearTimeout(selectionChangeTimeout);
+  selectionChangeTimeout = setTimeout(() => {
+    const selection = window.getSelection();
 
-  // Hide icon if selection is cleared
-  if (!selection || selection.toString().trim().length === 0) {
-    hideFloatingIcon();
-  }
+    // Hide icon if selection is cleared
+    if (!selection || selection.toString().trim().length === 0) {
+      hideFloatingIcon();
+    }
+  }, 150); // 150ms debounce
 }
 
 // Cleanup on page unload

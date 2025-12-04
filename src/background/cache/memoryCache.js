@@ -6,7 +6,9 @@ export class MemoryCache {
   constructor(maxSize = 500) {
     this.maxSize = maxSize;
     this.cache = new Map();
-    this.accessOrder = [];
+    // Use Map to track access order for O(1) operations
+    this.accessOrder = new Map();
+    this.timestamp = 0;
   }
 
   /**
@@ -40,13 +42,26 @@ export class MemoryCache {
 
     // If cache is full, remove least recently used
     if (this.cache.size >= this.maxSize) {
-      const lru = this.accessOrder.shift();
-      this.cache.delete(lru);
+      // Find LRU entry - O(n) but only when cache is full
+      // Trade-off: Simpler implementation vs. O(1) doubly-linked list
+      // For typical cache sizes (500 entries), this is acceptable performance
+      let lruKey = null;
+      let lruTimestamp = Infinity;
+      for (const [k, timestamp] of this.accessOrder.entries()) {
+        if (timestamp < lruTimestamp) {
+          lruTimestamp = timestamp;
+          lruKey = k;
+        }
+      }
+      if (lruKey) {
+        this.cache.delete(lruKey);
+        this.accessOrder.delete(lruKey);
+      }
     }
 
     // Add new entry
     this.cache.set(key, value);
-    this.accessOrder.push(key);
+    this.updateAccessOrder(key);
   }
 
   /**
@@ -54,11 +69,8 @@ export class MemoryCache {
    * @param {string} key
    */
   updateAccessOrder(key) {
-    const index = this.accessOrder.indexOf(key);
-    if (index > -1) {
-      this.accessOrder.splice(index, 1);
-    }
-    this.accessOrder.push(key);
+    // Use timestamp for O(1) access order tracking
+    this.accessOrder.set(key, ++this.timestamp);
   }
 
   /**
@@ -75,10 +87,7 @@ export class MemoryCache {
    * @param {string} key
    */
   delete(key) {
-    const index = this.accessOrder.indexOf(key);
-    if (index > -1) {
-      this.accessOrder.splice(index, 1);
-    }
+    this.accessOrder.delete(key);
     this.cache.delete(key);
   }
 
@@ -87,7 +96,8 @@ export class MemoryCache {
    */
   clear() {
     this.cache.clear();
-    this.accessOrder = [];
+    this.accessOrder.clear();
+    this.timestamp = 0;
   }
 
   /**

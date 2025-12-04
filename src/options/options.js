@@ -38,17 +38,20 @@ function populateLanguageSelect() {
   document.getElementById('supported-languages').innerHTML = langListHTML;
 }
 
-// Navigation
-document.querySelectorAll('.nav-item').forEach((item) => {
+// Navigation - cache node lists for better performance
+const navItems = document.querySelectorAll('.nav-item');
+const sections = document.querySelectorAll('.section');
+
+navItems.forEach((item) => {
   item.addEventListener('click', () => {
     const section = item.dataset.section;
 
     // Update active nav
-    document.querySelectorAll('.nav-item').forEach((nav) => nav.classList.remove('active'));
+    navItems.forEach((nav) => nav.classList.remove('active'));
     item.classList.add('active');
 
     // Hide all sections
-    document.querySelectorAll('.section').forEach((sec) => {
+    sections.forEach((sec) => {
       sec.classList.remove('active');
       sec.style.display = 'none';
     });
