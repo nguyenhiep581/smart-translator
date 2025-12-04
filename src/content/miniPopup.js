@@ -189,10 +189,14 @@ export function showMiniPopupForText({
  * Translate text
  */
 async function translateText(selection) {
-  const toLang = miniPopup.querySelector('.st-to-lang').value;
+  // Cache DOM queries for better performance
+  const toLangSelect = miniPopup.querySelector('.st-to-lang');
   const translationEl = miniPopup.querySelector('.st-translation');
+  const buttons = miniPopup.querySelectorAll('.st-btn');
+
+  const toLang = toLangSelect.value;
   currentTranslation = '';
-  miniPopup.querySelectorAll('.st-btn').forEach((btn) => (btn.disabled = true));
+  buttons.forEach((btn) => (btn.disabled = true));
 
   // Warn for long text
   const textLength = selection.text.length;

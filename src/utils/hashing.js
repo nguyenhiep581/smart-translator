@@ -11,8 +11,13 @@ export async function hashString(str) {
   const encoder = new TextEncoder();
   const data = encoder.encode(str);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  // Optimize: use Uint8Array directly without Array.from
+  const hashArray = new Uint8Array(hashBuffer);
+  const hashHex = new Array(hashArray.length);
+  for (let i = 0; i < hashArray.length; i++) {
+    hashHex[i] = hashArray[i].toString(16).padStart(2, '0');
+  }
+  return hashHex.join('');
 }
 
 /**

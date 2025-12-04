@@ -93,7 +93,14 @@ export class PersistentCache {
   async clear() {
     try {
       const all = await chrome.storage.local.get(null);
-      const cacheKeys = Object.keys(all).filter((key) => key.startsWith(CACHE_KEY_PREFIX));
+      const cacheKeys = [];
+      
+      // Optimize: avoid creating intermediate array with filter
+      for (const key in all) {
+        if (key.startsWith(CACHE_KEY_PREFIX)) {
+          cacheKeys.push(key);
+        }
+      }
 
       if (cacheKeys.length > 0) {
         await chrome.storage.local.remove(cacheKeys);
@@ -110,7 +117,14 @@ export class PersistentCache {
   async getStats() {
     try {
       const all = await chrome.storage.local.get(null);
-      const cacheEntries = Object.keys(all).filter((key) => key.startsWith(CACHE_KEY_PREFIX));
+      const cacheEntries = [];
+      
+      // Optimize: avoid creating intermediate array with filter
+      for (const key in all) {
+        if (key.startsWith(CACHE_KEY_PREFIX)) {
+          cacheEntries.push(key);
+        }
+      }
 
       return {
         count: cacheEntries.length,

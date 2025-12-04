@@ -17,7 +17,7 @@ export function showFloatingIcon(selection) {
   hideFloatingIcon();
 
   currentSelection = selection;
-  // Ensure we store a copy of rect to avoid DOMRect live mutations
+  // Store rect properties to avoid DOMRect live mutations
   const { rect } = selection;
   if (rect) {
     currentSelection = {
