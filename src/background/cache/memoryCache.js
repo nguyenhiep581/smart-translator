@@ -43,6 +43,8 @@ export class MemoryCache {
     // If cache is full, remove least recently used
     if (this.cache.size >= this.maxSize) {
       // Find LRU entry - O(n) but only when cache is full
+      // Trade-off: Simpler implementation vs. O(1) doubly-linked list
+      // For typical cache sizes (500 entries), this is acceptable performance
       let lruKey = null;
       let lruTimestamp = Infinity;
       for (const [k, timestamp] of this.accessOrder.entries()) {
